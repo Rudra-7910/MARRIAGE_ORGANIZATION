@@ -1,10 +1,10 @@
 # Make My Marriage
 
-Wedding organizer SaaS built as a TypeScript modular monolith. This milestone implements only the Express server foundation. Product requirements and planned APIs live in `docs/`.
+Wedding organizer SaaS built as a TypeScript modular monolith. The current milestone includes the responsive React homepage, login UI, and the existing Express server foundation. Product requirements and planned APIs live in `docs/`.
 
 Project location: `/home/rudra/Desktop/AI_MAKE_MY_MARRIAGE`.
 
-## Run the server
+## Run the homepage
 
 Use Node.js 22.13+ (22 LTS) or Node.js 24 LTS. Dependencies are installed through npm workspaces from the project root.
 
@@ -13,9 +13,19 @@ cd /home/rudra/Desktop/AI_MAKE_MY_MARRIAGE
 npm run dev
 ```
 
-The development server listens at `http://127.0.0.1:3000`. It restarts when server source files change.
+The Vite homepage opens at `http://127.0.0.1:3000` with hot reload. The homepage runs independently of Express and Atlas. Vite uses a strict port: it reports an error if 3000 is occupied instead of silently switching ports.
 
-If another process occupies port 3000, run `PORT=3002 npm run dev` and use `http://127.0.0.1:3002` instead. The initial verified run of this backend uses 3002 because an earlier Vite setup still occupies 3000. The configured default remains 3000.
+Implemented: the Stitch-inspired homepage, responsive navigation, illustrative workspace preview with note disclosures and department filtering, features, setup steps, FAQ disclosures, a footer, and the `/login` UI. Homepage login navigation opens that route. The login form uses React Hook Form and Zod for required-field/email checks, supports password visibility and password-manager autofill, and explicitly states that sign-in is not connected. Submitting valid fields shows a preview message; it never sends, logs, or persists credentials or claims a successful login.
+
+Workspace creation and signup still show a clear coming-soon dialog. Privacy, terms, and contact controls indicate that those details will be provided before launch. No signup form, session authentication, dashboard, external integrations, Hindi translation, or business APIs are implemented in this milestone. All displayed wedding names and financial figures are illustrative.
+
+## Run the backend separately
+
+```bash
+PORT=3001 npm run dev:server
+```
+
+The explicit port keeps the backend separate from Vite. The existing backend default remains 3000 if no `PORT` is set. Both processes can run in separate terminals; the homepage currently does not need API access.
 
 | Endpoint | Purpose |
 | --- | --- |
@@ -29,7 +39,24 @@ Atlas is optional for this local foundation. To connect it, copy `server/.env.ex
 
 ```text
 docs/                         PRD, API design, system design
-web/                          Reserved Vite/React workspace; not implemented
+web/
+  index.html                  Page title, description, fonts and favicon
+  vite.config.ts              React/Tailwind plugins and port 3000
+  src/
+    main.tsx                  React entry point
+    app/App.tsx               Application root
+    pages/HomePage.tsx        Homepage sections and dialog state
+    pages/LoginPage.tsx       Login layout and supporting navigation
+    components/layout/        Site header and footer
+    components/ui/            Brand, icons and information dialog
+    features/home/
+      components/             Preview, comparison, features, steps, FAQs
+      data/home-content.ts    Homepage copy and illustrative content
+    features/auth/
+      components/             Login form and supporting story panel
+      login-schema.ts         Client-side login field validation
+    styles/index.css          Tailwind theme and responsive component styles
+    styles/login.css          Responsive login page styles
 server/
   .env.example                Documented local configuration
   src/
@@ -68,14 +95,14 @@ npm run build
 npm start
 ```
 
-`npm run check` runs type checking, HTTP checks, and compilation together. `npm start` runs compiled server code; build first and stop the development server if using the same port. These commands target only the backend. Set `NODE_ENV=production` for a later production runtime; AWS deployment is not configured in this milestone.
+`npm run check` runs type checking for both workspaces, the backend HTTP checks, and both production builds. `npm start` runs compiled backend code only; build first and choose a free port. To inspect the frontend production build locally, run `npm run preview --workspace web`. Serving the React production build through Express and AWS deployment remain future work. Set `NODE_ENV=production` for a later backend production runtime.
 
-TypeScript uses Node's ESM conventions: source imports end in `.js` so compiled files run directly in Node. Source code remains ordinary TypeScript functions.
+The backend uses Node's ESM conventions: source imports end in `.js` so compiled files run directly in Node. The frontend uses Vite's bundler resolution. Both use ordinary TypeScript functions.
 
 ## Scope and design review
 
 The foundation follows the selected Express/Mongoose modular monolith and the API document's `/api/v1` prefix. The older system design uses `/api/...` examples; future endpoints should follow the API document's versioned prefix. The PRD also retains an older assumption excluding email invitations, while its guest requirements and the latest decisions include them. No requirement documents were changed in this milestone.
 
-Session authentication with MongoDB storage, wedding membership authorization, email campaigns, Socket.IO, R2 uploads, and the React UI are planned but not implemented here. There is no temporary in-memory authentication setup. Session-store library, background runner, and precise AWS services remain decisions for their respective milestones.
+Session authentication with MongoDB storage, wedding membership authorization, email campaigns, Socket.IO, R2 uploads, and application screens beyond the homepage and login UI are planned but not implemented here. There is no temporary in-memory authentication setup. Session-store library, background runner, and precise AWS services remain decisions for their respective milestones.
 
 The server currently includes Helmet headers, bounded JSON parsing, generated request IDs, consistent JSON errors, environment validation, database readiness reporting, and shutdown cleanup. This is a development foundation, not a complete production application.
