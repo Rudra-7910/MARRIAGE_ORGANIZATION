@@ -1,0 +1,23 @@
+{
+  "name": "make-my-marriage",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "workspaces": ["web", "server"],
+  "engines": {
+    "node": "^22.13.0 || ^24.0.0"
+  },
+  "scripts": {
+    "dev": "npm run dev --workspace server",
+    "build": "npm run build --workspace server",
+    "start": "npm run start --workspace server",
+    "typecheck": "npm run typecheck --workspace server",
+    "test": "npm run test --workspace server",
+    "check": "npm run typecheck && npm test && npm run build"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "concurrently": "^9.2.5",
+    "typescript": "^5.9.3"
+  }
+}
