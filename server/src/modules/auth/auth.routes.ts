@@ -84,6 +84,7 @@ export function createAuthRouter() {
     res.json({ data: { token: req.session.csrfToken } });
   });
 
+
   router.get("/me", tokenLimit, async (req, res) => {
     if (!req.session.userId)
       throw httpError(401, "UNAUTHENTICATED", "Please log in to continue.");
@@ -93,6 +94,7 @@ export function createAuthRouter() {
     res.json({ data: publicUser(user) });
   });
 
+  
   router.post("/signup", limit, checkCsrf, async (req, res) => {
     const result = signupSchema.safeParse(req.body);
     if (!result.success)
