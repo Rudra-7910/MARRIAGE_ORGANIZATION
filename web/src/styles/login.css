@@ -93,14 +93,8 @@
   .login-submit {
     @apply mt-7 min-h-[50px] w-full justify-center gap-3;
   }
-  .login-preview-note {
+  .login-session-note {
     @apply mt-3.5 text-center text-[10px] leading-[1.8] text-muted;
-  }
-  .login-preview-message {
-    @apply mt-4 flex items-start gap-2.5 rounded-lg border border-[#d2dfca] bg-[#f1f6ed] px-3.5 py-3 text-[12px] leading-[1.8] text-forest;
-  }
-  .login-preview-message > .icon {
-    @apply mt-1 size-4;
   }
   .login-create-account {
     @apply mt-6 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 border-t border-line pt-6 text-[11px] text-muted;
@@ -109,24 +103,6 @@
     @apply inline-flex min-h-9 items-center gap-1.5 font-bold text-forest underline decoration-[#aebdab] underline-offset-4;
   }
   .login-create-account .icon {
-    @apply size-[13px];
-  }
-  .login-sample-link {
-    @apply mt-5 flex items-center gap-3 rounded-lg border border-[#e0e5d8] bg-[#f7f8f3] px-4 py-3.5 transition-colors hover:border-[#b5c4ad];
-  }
-  .login-sample-icon {
-    @apply flex size-9 shrink-0 items-center justify-center rounded-full border border-[#e5e4d7] bg-white text-[#8c693f];
-  }
-  .login-sample-icon > .icon {
-    @apply size-4;
-  }
-  .login-sample-link > span:last-child {
-    @apply text-[10px] leading-[1.8] text-muted;
-  }
-  .login-sample-link strong {
-    @apply flex items-center gap-2 text-[11px] font-bold text-forest;
-  }
-  .login-sample-link strong .icon {
     @apply size-[13px];
   }
   .login-story {
@@ -348,5 +324,174 @@
   }
   .login-footer-inner > div {
     gap: 28px;
+  }
+}
+
+/* Warm paper, blush botanicals and an Indian celebration photograph. */
+@layer components {
+  .login-page {
+    background-color: #fbf5ef;
+    background-image:
+      url("/images/wedding-vines.svg"),
+      radial-gradient(ellipse at 10% 35%, #f2ded8aa, transparent 54%),
+      radial-gradient(ellipse at 90% 90%, #e5eadb99, transparent 52%);
+    background-position:
+      right center,
+      left top,
+      right bottom;
+    background-size:
+      430px 660px,
+      100% 100%,
+      100% 100%;
+    background-repeat: no-repeat;
+  }
+  .login-header {
+    background: #fffcf7b8;
+    border-color: #e9ded3;
+  }
+  .login-main {
+    padding-top: 48px;
+    padding-bottom: 40px;
+  }
+  .login-card {
+    border: 1px solid #e6dace;
+    border-radius: 22px;
+    background: #fffdf9;
+    box-shadow:
+      0 24px 80px -35px #654b3a35,
+      0 2px 8px #67453005;
+  }
+  .login-form-panel {
+    background: linear-gradient(145deg, #fffdf9, #fffaf5);
+    padding: 46px 48px;
+  }
+  .login-form-panel > .eyebrow {
+    color: #95666b;
+    letter-spacing: 0.15em;
+  }
+  .login-form-panel h1 {
+    font-size: 48px;
+    line-height: 1.08;
+    letter-spacing: -1.1px;
+  }
+  .login-form-panel h1 em {
+    color: #9b626b;
+  }
+  .login-input-wrap {
+    border-color: #e4dcd2;
+    background: #fffefa;
+  }
+  .login-input-wrap:focus-within {
+    border-color: #49705d;
+    box-shadow: 0 0 0 3px #49705d12;
+  }
+  .login-submit {
+    border-radius: 10px;
+    min-height: 53px;
+    box-shadow: 0 5px 12px #28544718;
+  }
+  .login-story {
+    border: 0;
+    background-color: #264a3a;
+    background-image:
+      linear-gradient(180deg, #173b2bc9 0%, #173b2bd9 40%, #193e2ff5 73%),
+      url("/images/stitch/ceremony-1.jpg");
+    background-size: cover;
+    background-position: center;
+    color: #fff9f0;
+    padding: 48px 40px;
+  }
+  .login-story-eyebrow {
+    color: #e6cfad;
+    letter-spacing: 0.13em;
+    font-size: 8px;
+  }
+  .login-story h2 {
+    font-size: 51px;
+  }
+  .login-story h2 em {
+    color: #ecc5b6;
+  }
+  .login-story-intro,
+  .login-benefit p,
+  .login-guest-note p {
+    color: #e4e8dc;
+  }
+  .login-story-flower {
+    color: #ead5b8;
+    opacity: 0.12;
+    right: -35px;
+    top: 20px;
+  }
+  .login-benefits {
+    gap: 23px;
+    margin-top: 34px;
+  }
+  .login-benefit-icon {
+    border-color: #d5dfcc38;
+    background: #ffffff0d;
+    color: #ecd5b4;
+    border-radius: 50%;
+  }
+  .login-guest-note {
+    border-color: #d6dec52e;
+  }
+  .login-guest-note > span {
+    background: #ffffff12;
+    color: #e6cdb1;
+  }
+  .login-below-card {
+    color: #8c756a;
+  }
+  .login-footer {
+    background: #fffcf766;
+    border-color: #e6dace;
+  }
+  @media (max-width: 1000px) {
+    .login-form-panel {
+      padding: 38px 30px;
+    }
+    .login-form-panel h1 {
+      font-size: 41px;
+    }
+    .login-story {
+      padding: 40px 30px;
+    }
+    .login-story h2 {
+      font-size: 44px;
+    }
+  }
+  @media (max-width: 760px) {
+    .login-page {
+      background-size:
+        260px 480px,
+        100% 100%,
+        100% 100%;
+      background-position:
+        right top,
+        left top,
+        right bottom;
+    }
+    .login-main {
+      padding-top: 28px;
+      padding-bottom: 28px;
+    }
+    .login-form-panel {
+      padding: 34px 25px;
+    }
+    .login-form-panel h1 {
+      font-size: 39px;
+    }
+    .login-story {
+      padding: 34px 25px;
+    }
+    .login-story h2 {
+      font-size: 42px;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .login-input-wrap {
+      transition: none;
+    }
   }
 }

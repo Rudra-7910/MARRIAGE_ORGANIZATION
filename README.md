@@ -1,108 +1,83 @@
 # Make My Marriage
 
-Wedding organizer SaaS built as a TypeScript modular monolith. The current milestone includes the responsive React homepage, login UI, and the existing Express server foundation. Product requirements and planned APIs live in `docs/`.
+TypeScript wedding organizer application: Vite/React, Express, Mongoose and MongoDB Atlas. The current working flow is **account → family → wedding → dashboard**, with organizer editing and a public guest website using the same MongoDB wedding record.
 
-Project location: `/home/rudra/Desktop/AI_MAKE_MY_MARRIAGE`.
+## Run locally
 
-## Run the homepage
-
-Use Node.js 22.13+ (22 LTS) or Node.js 24 LTS. Dependencies are installed through npm workspaces from the project root.
+Use Node.js 22.13+ or 24 LTS. Project: `/home/rudra/Desktop/AI_MAKE_MY_MARRIAGE`.
 
 ```bash
-cd /home/rudra/Desktop/AI_MAKE_MY_MARRIAGE
+npm install
 npm run dev
 ```
 
-The Vite homepage opens at `http://127.0.0.1:3000` with hot reload. The homepage runs independently of Express and Atlas. Vite uses a strict port: it reports an error if 3000 is occupied instead of silently switching ports.
+Frontend: **http://127.0.0.1:3000**. Express: port 3001. Vite forwards same-origin `/api` requests to Express. `npm run dev:web` and `npm run dev:server` run them individually.
 
-Implemented: the Stitch-inspired homepage, responsive navigation, illustrative workspace preview with note disclosures and department filtering, features, setup steps, FAQ disclosures, a footer, and the `/login` UI. Homepage login navigation opens that route. The login form uses React Hook Form and Zod for required-field/email checks, supports password visibility and password-manager autofill, and explicitly states that sign-in is not connected. Submitting valid fields shows a preview message; it never sends, logs, or persists credentials or claims a successful login.
+Configure the gitignored `server/.env` before starting. Use `server/.env.example` as a template for a fresh checkout:
 
-Workspace creation and signup still show a clear coming-soon dialog. Privacy, terms, and contact controls indicate that those details will be provided before launch. No signup form, session authentication, dashboard, external integrations, Hindi translation, or business APIs are implemented in this milestone. All displayed wedding names and financial figures are illustrative.
+- `MONGODB_URI`: your Atlas database connection string.
+- `SESSION_SECRET`: at least 32 characters; generate with `node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"`.
+- `APP_ORIGIN`: default `http://127.0.0.1:3000`. Local development also accepts `localhost` on that protocol/port; production requires the exact origin.
+- `TRUST_PROXY_CIDRS`: empty by default. Only set to actual trusted proxy IPs/subnets for TLS termination; restrict backend network access to those proxies. Blanket trust values and `/0` networks are rejected.
 
-## Run the backend separately
+Both environments wait for MongoDB and required indexes before listening. Atlas must allow the machine's IP and the database user must be able to create indexes. A runtime disconnection makes readiness/auth unavailable. Keep credentials out of source control.
 
-```bash
-PORT=3001 npm run dev:server
-```
+## What works
 
-The explicit port keeps the backend separate from Vite. The existing backend default remains 3000 if no `PORT` is set. Both processes can run in separate terminals; the homepage currently does not need API access.
+- Session-based signup/login/logout through a shared Axios client; bcrypt hashing in the Mongoose save hook, HttpOnly cookies, CSRF/origin protection and authentication rate limits.
+- Register your family (name and bride/groom/both side), then create your wedding.
+- The blank wedding form collects couple names, date, ceremony start/optional end time, venue/address/city, optional coordinates, public contact role/phone, optional welcome note and YouTube link.
+- Dashboard access requires an existing wedding. Direct navigation without one goes to setup. The dashboard API returns a JSON 409 redirect instruction instead of fabricated data.
+- Organizer members edit wedding details using the same form. Server-side membership checks reject worker/manager writes, and version checks prevent stale edits from overwriting a newer save.
+- `/w/:publicId` is a login-free guest website with the saved names, date, venue, Google Maps directions, public contact and optional YouTube player.
+- Changes immediately appear in the organizer view. Open guest pages refresh within five seconds and on focus. Guest URLs remain stable after edits.
 
-| Endpoint | Purpose |
-| --- | --- |
-| `GET /` | API name and version |
-| `GET /api/v1/health/live` | Confirms the HTTP process is running |
-| `GET /api/v1/health/ready` | Returns 200 only when MongoDB is connected; otherwise 503 |
+The original Stitch dashboard layout and section navigation are retained behind the wedding-creation gate. Overview, Functions, Teams & Services, Budget & Expenses, Guests & Invites, Find Services, Photos, Guest Website, Wedding Settings and People & Access all have dedicated screens. Wedding identity, ceremony details, guest link and current access use API data. Unconnected features have explicit empty/coming-soon states rather than fake vendors, spending or progress.
 
-Atlas is optional for this local foundation. To connect it, copy `server/.env.example` to `server/.env` and set your own `MONGODB_URI`. Never commit that file. A failed development connection leaves HTTP available and readiness unavailable. Production startup requires a successful database connection.
+Nearby service categories use the saved venue/address or coordinates to open a Google Maps search. Category photographs are decorative illustrations from Stitch, not actual vendor listings or wedding photos. The in-app directory has not been connected yet.
+
+The old sample records, localStorage wedding drafts and demo upload routes have been removed. Old `/demo/*` bookmarks route through the real authenticated flow. No wedding records are seeded for new users.
+
+Invitations, expense tracking, a vendor directory, photo uploads, additional functions and team-invitation controls have frontend sections but no backend persistence yet. Their action buttons are disabled and marked coming soon. Earlier product documents describe planned work, not completed services.
 
 ## Structure
 
 ```text
-docs/                         PRD, API design, system design
-web/
-  index.html                  Page title, description, fonts and favicon
-  vite.config.ts              React/Tailwind plugins and port 3000
-  src/
-    main.tsx                  React entry point
-    app/App.tsx               Application root
-    pages/HomePage.tsx        Homepage sections and dialog state
-    pages/LoginPage.tsx       Login layout and supporting navigation
-    components/layout/        Site header and footer
-    components/ui/            Brand, icons and information dialog
-    features/home/
-      components/             Preview, comparison, features, steps, FAQs
-      data/home-content.ts    Homepage copy and illustrative content
-    features/auth/
-      components/             Login form and supporting story panel
-      login-schema.ts         Client-side login field validation
-    styles/index.css          Tailwind theme and responsive component styles
-    styles/login.css          Responsive login page styles
-server/
-  .env.example                Documented local configuration
-  src/
-    main.ts                   HTTP startup and graceful shutdown
-    app.ts                    Express middleware and route registration
-    config/                   Environment and Mongoose connection
-    routes/                   Versioned API router
-    middleware/               Request IDs, JSON errors, 404 handling
-    modules/
-      health/                 Implemented health routes and HTTP checks
-      auth/                   Future account/session endpoints
-      weddings/               Future wedding setup
-      memberships/            Future organizer/manager/worker access
-      functions/              Future ceremonies and venues
-      departments/            Future checklist and service progress
-      attention/              Future attention flags
-      finance/                Future organizer-only expenses
-      providers/              Future provider directory
-      invitations/            Future guests and email invitations
-      media/                  Future uploads and approved gallery
-      announcements/          Future guest updates
-      translation/            Future Hindi interface support
-    integrations/             Reserved email, Google, and R2 adapters
-    realtime/                 Reserved Socket.IO setup
-    jobs/                     Reserved reminder/background processing
+web/src/
+  app/App.tsx                  Public/account routes and lazy loading
+  features/auth/               Login form and account gate
+  features/weddings/
+    SetupPage.tsx              Family setup, wedding setup and flow diagram
+    WeddingForm.tsx            Shared create/edit form
+    WeddingApp.tsx             Protected workspace routes and organizer edits
+    DashboardLayout.tsx        Stitch sidebar, header and responsive navigation
+    WeddingOverview.tsx        Dashboard using saved wedding details
+    WorkspacePages.tsx         Planning sections and guest website settings
+    ServicesPage.tsx           Nearby categories and Google Maps discovery
+    GuestWeddingPage.tsx       Public guest website
+  lib/api.ts                   Axios client and session authentication
+  lib/weddings.ts              Wedding API calls and frontend types
+  styles/                      Shared theme, login and wedding UI
+server/src/
+  modules/auth/                Routes, controller, sessions and User model
+  modules/weddings/
+    wedding.models.ts          Family and Wedding models
+    wedding.routes.ts          Setup, dashboard, edits and public projection
+    wedding.test.ts            Isolated end-to-end API and RBAC checks
+  config/                      Environment, MongoDB connection and indexes
+  middleware/                  Safe errors and request IDs
 ```
 
-Future feature code stays inside its module: route/controller, service, and Mongoose model files can be added when that feature is implemented. Empty folders are placeholders, not working services. There are no mandatory repository classes or dependency injection containers.
+Small route handlers use Mongoose directly. No extra service/repository layer or global React context is required.
 
-## Verification and compiled startup
+## Verification
 
 ```bash
-npm run typecheck
-npm test
-npm run build
-npm start
+npm run check
 ```
 
-`npm run check` runs type checking for both workspaces, the backend HTTP checks, and both production builds. `npm start` runs compiled backend code only; build first and choose a free port. To inspect the frontend production build locally, run `npm run preview --workspace web`. Serving the React production build through Express and AWS deployment remain future work. Set `NODE_ENV=production` for a later backend production runtime.
+Runs type checks, backend/API and Axios client tests, and both builds. Integration tests use disposable MongoDB instances, never Atlas; their MongoDB binary downloads on first use. Tests cover setup redirect behavior, ownership, duplicate creation, validation, persisted edits, public-field filtering, role enforcement, stale/concurrent edits, auth, CSRF, origin restrictions, proxy cookies and logout after exhausted quotas.
 
-The backend uses Node's ESM conventions: source imports end in `.js` so compiled files run directly in Node. The frontend uses Vite's bundler resolution. Both use ordinary TypeScript functions.
+`npm start` runs compiled Express after building. Serving the frontend bundle through Express and AWS deployment remain future work. Current IP rate limits are per-process; shared limiting is needed before multiple server instances.
 
-## Scope and design review
-
-The foundation follows the selected Express/Mongoose modular monolith and the API document's `/api/v1` prefix. The older system design uses `/api/...` examples; future endpoints should follow the API document's versioned prefix. The PRD also retains an older assumption excluding email invitations, while its guest requirements and the latest decisions include them. No requirement documents were changed in this milestone.
-
-Session authentication with MongoDB storage, wedding membership authorization, email campaigns, Socket.IO, R2 uploads, and application screens beyond the homepage and login UI are planned but not implemented here. There is no temporary in-memory authentication setup. Session-store library, background runner, and precise AWS services remain decisions for their respective milestones.
-
-The server currently includes Helmet headers, bounded JSON parsing, generated request IDs, consistent JSON errors, environment validation, database readiness reporting, and shutdown cleanup. This is a development foundation, not a complete production application.
+See [the setup/API flow diagram](docs/Wedding-Setup-Flow.md) and [Stitch design reference](docs/designs/stitch-reference.md).

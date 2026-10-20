@@ -24,7 +24,7 @@ export function SiteFooter({
               <span>EXPLORE</span>
               <a href="#features">The workspace</a>
               <a href="#how-it-works">How it works</a>
-              <a href="#sample-workspace">Sample wedding</a>
+              <a href="/app/setup">Your wedding workspace</a>
             </div>
             <div>
               <span>A LITTLE MORE</span>

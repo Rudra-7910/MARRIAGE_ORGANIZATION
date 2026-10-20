@@ -30,17 +30,17 @@ export function LoginStory() {
       </span>
       <span className="login-story-eyebrow">
         <span className="status-dot" />
-        MADE FOR BOTH FAMILIES
+        TWO FAMILIES. ONE BEAUTIFUL STORY.
       </span>
       <h2>
-        Plan together.
+        For your happily
         <br />
-        <em>Follow up less.</em>
+        <em>ever after.</em>
       </h2>
       <p className="login-story-intro">
-        For the big day, the little details,
+        The little rituals. The big feelings.
         <br />
-        and everyone who makes it happen.
+        And all the people who make it yours.
       </p>
       <div className="login-benefits">
         {benefits.map((benefit) => (

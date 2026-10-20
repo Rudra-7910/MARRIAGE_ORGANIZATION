@@ -1,9 +1,12 @@
-import { Router } from 'express';
-import healthRouter from '../modules/health/health.routes.js';
+import { createAuthRouter } from "../modules/auth/auth.routes.js";
+import { createWeddingRouter } from "../modules/weddings/wedding.routes.js";
+import { Router } from "express";
+import healthRouter from "../modules/health/health.routes.js";
 
 const apiRouter = Router();
 
-apiRouter.use('/health', healthRouter);
+apiRouter.use("/health", healthRouter);
+apiRouter.use("/auth", createAuthRouter());
 
-// Mount business modules here only when their real access checks exist.
+apiRouter.use(createWeddingRouter());
 export default apiRouter;

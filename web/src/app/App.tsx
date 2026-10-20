@@ -1,16 +1,51 @@
-import { useEffect } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { HomePage } from "../pages/HomePage";
-import { LoginPage } from "../pages/LoginPage";
+const LoginPage = lazy(() =>
+  import("../pages/LoginPage").then((module) => ({
+    default: module.LoginPage,
+  })),
+);
+const SignupPage = lazy(() =>
+  import("../pages/SignupPage").then((module) => ({
+    default: module.SignupPage,
+  })),
+);
+const AuthGate = lazy(() =>
+  import("../features/auth/AuthGate").then((module) => ({
+    default: module.AuthGate,
+  })),
+);
+const GuestWeddingPage = lazy(() =>
+  import("../features/weddings/GuestWeddingPage").then((module) => ({
+    default: module.GuestWeddingPage,
+  })),
+);
 
 export function App() {
   const location = useLocation();
 
   useEffect(() => {
-    document.title =
-      location.pathname === "/login"
-        ? "Log in — Make My Marriage"
-        : "Make My Marriage — A little less follow-up. A lot more shaadi.";
+    const sectionTitles: Record<string, string> = {
+      login: "Log in",
+      signup: "Create account",
+      overview: "Overview",
+      setup: "Set up your wedding",
+      edit: "Edit wedding",
+      functions: "Functions",
+      departments: "Teams & Services",
+      budget: "Budget & Expenses",
+      guests: "Guests & Invitations",
+      photos: "Photos",
+      services: "Find Services",
+      members: "People & Access",
+      "guest-website": "Guest Website",
+      settings: "Wedding Settings",
+    };
+    const section = location.pathname.split("/").filter(Boolean).pop() || "";
+    document.title = sectionTitles[section]
+      ? sectionTitles[section] + " — Make My Marriage"
+      : "Make My Marriage — A little less follow-up. A lot more shaadi.";
 
     if (location.hash) {
       document
@@ -22,10 +57,25 @@ export function App() {
   }, [location.pathname, location.hash, location.key]);
 
   return (
-    <Routes>
-      <Route path="/" element={<HomePage />} />
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+    <Suspense
+      fallback={
+        <main className="ws-empty" role="status">
+          Loading page…
+        </main>
+      }
+    >
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/signup" element={<SignupPage />} />
+        <Route
+          path="/demo/*"
+          element={<Navigate to="/app/overview" replace />}
+        />
+        <Route path="/app/*" element={<AuthGate />} />
+        <Route path="/w/:publicId" element={<GuestWeddingPage />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </Suspense>
   );
 }

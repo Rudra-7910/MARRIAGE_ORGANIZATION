@@ -24,7 +24,13 @@ export type IconName =
   | "phone"
   | "circle-check"
   | "message"
-  | "link";
+  | "link"
+  | "dashboard"
+  | "store"
+  | "globe"
+  | "settings"
+  | "logout"
+  | "search";
 
 type IconProps = {
   name: IconName;
@@ -134,6 +140,39 @@ const paths: Record<IconName, ReactNode> = {
   link: (
     <>
       <path d="m10 8 3-3a4 4 0 0 1 6 6l-3 3M14 16l-3 3a4 4 0 0 1-6-6l3-3M8 16l8-8" />
+    </>
+  ),
+  dashboard: (
+    <>
+      <rect x="3" y="3" width="7" height="7" rx="1.5" />
+      <rect x="14" y="3" width="7" height="7" rx="1.5" />
+      <rect x="3" y="14" width="7" height="7" rx="1.5" />
+      <rect x="14" y="14" width="7" height="7" rx="1.5" />
+    </>
+  ),
+  store: (
+    <>
+      <path d="M3 10 5 3h14l2 7M3 10c0 4 6 4 6 0 0 4 6 4 6 0 0 4 6 4 6 0M5 14v7h14v-7M9 21v-6h6v6" />
+    </>
+  ),
+  globe: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <ellipse cx="12" cy="12" rx="4" ry="9" />
+      <path d="M3 12h18M5 7h14M5 17h14" />
+    </>
+  ),
+  settings: (
+    <>
+      <path d="m10 3-1 3-3 1-3 1 1 3-1 3 3 2 1 3 3-1 3 1 2-3 3-1-1-3 1-3-3-2-1-3-3 1Z" />
+      <circle cx="10.5" cy="11.5" r="3" />
+    </>
+  ),
+  logout: <path d="M9 4H4v16h5M10 12h11m-4-4 4 4-4 4" />,
+  search: (
+    <>
+      <circle cx="10.5" cy="10.5" r="6.5" />
+      <path d="m16 16 5 5" />
     </>
   ),
 };

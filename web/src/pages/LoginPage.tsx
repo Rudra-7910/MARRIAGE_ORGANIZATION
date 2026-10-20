@@ -31,33 +31,27 @@ export function LoginPage() {
       <main id="login-main" className="login-main page-container">
         <div className="login-card">
           <section className="login-form-panel" aria-labelledby="login-heading">
-            <span className="eyebrow">BACK TO YOUR PEOPLE, AND YOUR PLANS</span>
-            <h1 id="login-heading">Welcome back.</h1>
+            <span className="eyebrow">
+              YOUR PEOPLE. YOUR PLANS. YOUR FOREVER.
+            </span>
+            <h1 id="login-heading">
+              Back to your
+              <br />
+              <em>beautiful beginning.</em>
+            </h1>
             <p className="login-intro">
-              Your wedding plans, right where you left them.
-              <br className="desktop-break" /> Log in to bring everything
-              together.
+              A little less planning. A little more together.
+              <br className="desktop-break" /> Your wedding plans are right
+              where you left them.
             </p>
             <LoginForm />
             <div className="login-create-account">
               <span>New to Make My Marriage?</span>
-              <button onClick={() => setDialogTopic("start")}>
+              <Link to="/signup">
                 Create an account
                 <Icon name="arrow" />
-              </button>
+              </Link>
             </div>
-            <Link to="/#sample-workspace" className="login-sample-link">
-              <span className="login-sample-icon">
-                <Icon name="eye" />
-              </span>
-              <span>
-                Just taking a look?
-                <strong>
-                  Explore a sample wedding
-                  <Icon name="arrow" />
-                </strong>
-              </span>
-            </Link>
           </section>
           <LoginStory />
         </div>

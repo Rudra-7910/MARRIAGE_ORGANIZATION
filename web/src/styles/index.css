@@ -3,10 +3,13 @@
 @theme {
   --color-forest: #285447;
   --color-forest-dark: #1e4035;
-  --color-paper: #faf8f4;
+  --color-paper: #fbf7f3;
+  --color-rose: #ad747a;
+  --color-blush: #f5e8e3;
+  --color-champagne: #e5d2b6;
   --color-ink: #242824;
   --color-muted: #5f665e;
-  --color-line: #e4e5de;
+  --color-line: #e7e1d9;
   --color-sage: #edf1e9;
   --font-sans: "Manrope", sans-serif;
   --font-editorial: "Newsreader", Georgia, serif;
@@ -54,8 +57,7 @@
     color: #1e4035;
     background: #dbe6d9;
   }
-  section[id],
-  #sample-workspace {
+  section[id] {
     scroll-margin-top: 110px;
   }
   em {
@@ -178,168 +180,6 @@
   }
   .reassurance-divider {
     @apply h-3 w-px bg-[#d5d7ce];
-  }
-  .workspace-preview {
-    @apply relative mx-auto mt-14 w-full max-w-[1000px] scroll-mt-[110px] overflow-hidden rounded-[13px] border border-[#d8ddd3] bg-white text-left;
-    box-shadow:
-      0 14px 35px -20px #263c3040,
-      0 2px 5px #263c300a;
-  }
-  .preview-header {
-    @apply flex items-center justify-between gap-3 border-b border-line bg-[#f0f3ec] px-6 py-4;
-  }
-  .couple-avatar {
-    @apply flex size-[37px] items-center justify-center rounded-lg bg-forest font-editorial text-[20px] text-white;
-  }
-  .couple-avatar span {
-    @apply mx-[1px] text-[12px] italic;
-  }
-  .preview-header h2 {
-    @apply text-[13px] font-extrabold tracking-[-0.2px];
-  }
-  .preview-header p {
-    @apply mt-1 flex items-center gap-1 text-[10px] text-muted;
-  }
-  .preview-header p .icon {
-    @apply size-[11px];
-  }
-  .sample-pill {
-    @apply inline-flex items-center gap-2 rounded-full border border-[#d6ddd2] bg-[#f9faf7] px-3 py-1.5 text-[9px] font-semibold text-forest;
-  }
-  .status-dot {
-    @apply inline-block size-[5px] shrink-0 rounded-full bg-current;
-  }
-  .preview-content {
-    @apply px-6 pb-5 pt-5;
-  }
-  .preview-section-label {
-    @apply mb-3 flex items-center justify-between gap-3 text-[9px] text-muted;
-  }
-  .preview-section-label > span:first-child {
-    @apply flex items-center gap-1.5 text-[9px] font-extrabold tracking-[0.08em] text-[#866037];
-  }
-  .preview-section-label .icon {
-    @apply size-[13px];
-  }
-  .attention-grid {
-    @apply grid grid-cols-3 gap-3;
-  }
-  .attention-card {
-    @apply rounded-[7px] border border-line bg-white p-3.5;
-  }
-  .attention-card-alert {
-    @apply border-[#eadbc5] bg-[#fdfbf7];
-  }
-  .attention-meta {
-    @apply mb-3 flex items-center justify-between gap-2 text-[8px] text-muted;
-  }
-  .attention-meta > span:first-child {
-    @apply rounded bg-[#f0f2e9] px-1.5 py-1 text-[8px] font-bold text-forest;
-  }
-  .attention-card-alert .attention-meta > span:first-child {
-    @apply bg-[#f7eedc] text-[#866037];
-  }
-  .attention-card h3 {
-    @apply text-[11px] font-extrabold;
-  }
-  .attention-card > p {
-    @apply mt-1.5 text-[10px] leading-[1.7] text-muted;
-  }
-  .attention-bottom {
-    @apply mt-3 flex items-center justify-between gap-2 border-t border-line pt-2 text-[9px] text-muted;
-  }
-  .attention-bottom button {
-    @apply flex min-h-7 items-center gap-1 font-bold text-forest;
-  }
-  .attention-bottom .icon {
-    @apply size-3;
-  }
-  .sample-note {
-    @apply mt-3 flex items-start gap-3 rounded-md border border-line bg-[#f4f6ef] px-4 py-3 text-[12px] leading-relaxed text-muted;
-  }
-  .sample-note > .icon {
-    @apply mt-0.5 size-4 text-forest;
-  }
-  .sample-note button {
-    @apply ml-auto flex size-7 shrink-0 items-center justify-center;
-  }
-  .departments-heading {
-    @apply mb-2 mt-5 flex flex-wrap items-center justify-between gap-2;
-  }
-  .departments-heading h3 {
-    @apply text-[11px] font-extrabold;
-  }
-  .filter-button {
-    @apply flex min-h-8 items-center gap-1.5 rounded-md px-2 text-[9px] font-semibold text-muted hover:bg-sage;
-  }
-  .filter-button.is-active {
-    @apply bg-sage text-forest;
-  }
-  .filter-button .icon {
-    @apply size-3;
-  }
-  .department-list {
-    @apply overflow-hidden rounded-lg border border-line;
-  }
-  .department-row {
-    @apply grid grid-cols-[24px_1fr_110px_120px] items-center gap-3 border-b border-line px-4 py-3 last:border-b-0;
-  }
-  .department-icon {
-    @apply text-forest;
-  }
-  .department-icon .icon {
-    @apply size-[17px];
-  }
-  .department-description h4 {
-    @apply text-[11px] font-bold;
-  }
-  .department-description p {
-    @apply mt-0.5 text-[9px] text-muted;
-  }
-  .work-status {
-    @apply inline-flex w-fit items-center gap-1.5 whitespace-nowrap rounded-full border px-2 py-1 text-[9px] font-semibold;
-  }
-  .status-amber {
-    @apply border-[#f1e0b3] bg-[#fff8e8] text-[#895e0e];
-  }
-  .status-green {
-    @apply border-[#d9e8d6] bg-[#edf5eb] text-[#356333];
-  }
-  .status-red {
-    @apply border-[#f0d8d4] bg-[#fdf0ee] text-[#a44539];
-  }
-  .department-update {
-    @apply text-right text-[9px] text-muted;
-  }
-  .preview-finance {
-    @apply mt-4 flex items-center justify-between gap-4 rounded-lg border border-[#e2e5da] bg-[#f1f3eb] px-4 py-3.5;
-  }
-  .finance-label {
-    @apply flex items-center gap-2 text-forest;
-  }
-  .finance-label > .icon {
-    @apply size-[15px];
-  }
-  .finance-label span {
-    @apply block text-[8px] font-extrabold tracking-[0.06em];
-  }
-  .finance-label small {
-    @apply mt-1 block text-[8px] text-muted;
-  }
-  .finance-amounts {
-    @apply flex gap-7;
-  }
-  .finance-amounts > div > span {
-    @apply mb-1 block text-[8px] text-muted;
-  }
-  .finance-amounts strong {
-    @apply text-[12px] font-bold tabular-nums;
-  }
-  .preview-caption {
-    @apply flex items-center justify-center gap-1.5 border-t border-line bg-[#fcfcf9] px-4 py-2.5 text-center text-[9px] leading-relaxed text-muted;
-  }
-  .preview-caption .icon {
-    @apply size-[12px];
   }
   .hero-afterword {
     @apply mx-auto flex items-center justify-center gap-4 py-8 text-[10px] tracking-[0.02em] text-muted;
@@ -768,142 +608,6 @@
   .reassurance-divider {
     height: 10px;
   }
-  .workspace-preview {
-    margin-top: 35px;
-    border-radius: 10px;
-  }
-  .preview-header {
-    align-items: flex-start;
-    padding: 15px 13px;
-    gap: 8px;
-  }
-  .couple-avatar {
-    width: 29px;
-    height: 32px;
-    font-size: 17px;
-  }
-  .preview-header h2 {
-    font-size: 11px;
-  }
-  .preview-header p {
-    flex-wrap: wrap;
-    font-size: 8px;
-    gap: 3px;
-  }
-  .sample-pill {
-    font-size: 0;
-    gap: 0;
-    width: 23px;
-    height: 23px;
-    padding: 8px;
-  }
-  .sample-pill .status-dot {
-    width: 5px;
-    height: 5px;
-  }
-  .preview-content {
-    padding: 16px 12px 12px;
-  }
-  .preview-section-label {
-    margin-bottom: 10px;
-  }
-  .preview-section-label > span:first-child {
-    font-size: 8px;
-    letter-spacing: 0.02em;
-  }
-  .preview-section-label > span:last-child {
-    display: none;
-  }
-  .attention-grid {
-    grid-template-columns: 1fr;
-    gap: 8px;
-  }
-  .attention-card {
-    padding: 12px;
-  }
-  .attention-meta {
-    margin-bottom: 7px;
-    font-size: 10px;
-  }
-  .attention-meta > span:first-child {
-    font-size: 9px;
-  }
-  .attention-card h3 {
-    font-size: 12px;
-  }
-  .attention-card > p {
-    font-size: 11px;
-    margin-top: 3px;
-  }
-  .attention-bottom {
-    font-size: 10px;
-    margin-top: 8px;
-    padding-top: 5px;
-  }
-  .attention-bottom button {
-    min-height: 34px;
-  }
-  .departments-heading {
-    margin-top: 18px;
-    gap: 5px;
-  }
-  .departments-heading h3 {
-    font-size: 10px;
-  }
-  .filter-button {
-    font-size: 9px;
-    padding: 0;
-    min-height: 36px;
-  }
-  .department-row {
-    grid-template-columns: 20px 1fr auto;
-    padding: 12px 9px;
-    gap: 7px;
-  }
-  .department-description h4 {
-    font-size: 10px;
-  }
-  .department-description p {
-    font-size: 9px;
-    line-height: 1.7;
-    max-width: 140px;
-  }
-  .work-status {
-    font-size: 8px;
-    padding: 4px 6px;
-    gap: 4px;
-  }
-  .preview-finance {
-    display: block;
-    padding: 13px 11px;
-  }
-  .finance-label span {
-    font-size: 8px;
-  }
-  .finance-label small {
-    max-width: none;
-    font-size: 9px;
-  }
-  .finance-amounts {
-    justify-content: space-between;
-    gap: 8px;
-    margin-top: 15px;
-  }
-  .finance-amounts > div > span {
-    font-size: 9px;
-  }
-  .finance-amounts strong {
-    font-size: 12px;
-  }
-  .preview-caption {
-    font-size: 9px;
-    align-items: flex-start;
-    line-height: 1.7;
-    padding: 11px;
-  }
-  .preview-caption .icon {
-    margin-top: 2px;
-  }
   .hero-afterword {
     gap: 8px;
     font-size: 8px;
@@ -1086,5 +790,30 @@
   *::after {
     transition-duration: 0.01ms !important;
     animation-duration: 0.01ms !important;
+  }
+}
+
+@layer components {
+  .hero-section {
+    background:
+      radial-gradient(ellipse at 85% 10%, #f2e3dc88, transparent 55%), #fbf7f3;
+  }
+  .hero-eyebrow,
+  .eyebrow {
+    color: #946e6c;
+  }
+  .closing-card {
+    border-color: #e7d9cc;
+  }
+}
+
+@layer components {
+  .status-dot {
+    display: inline-block;
+    width: 5px;
+    height: 5px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background: currentColor;
   }
 }

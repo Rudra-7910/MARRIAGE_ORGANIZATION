@@ -1,20 +1,22 @@
+import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { SiteHeader } from "../components/layout/SiteHeader";
 import { SiteFooter } from "../components/layout/SiteFooter";
 import { Icon } from "../components/ui/Icon";
 import { InfoDialog } from "../components/ui/InfoDialog";
 import type { DialogTopic } from "../components/ui/InfoDialog";
-import { WorkspacePreview } from "../features/home/components/WorkspacePreview";
+import { SetupDiagram } from "../features/weddings/SetupPage";
 import { PlanningComparison } from "../features/home/components/PlanningComparison";
 import { FeatureSection } from "../features/home/components/FeatureSection";
 import { HowItWorks } from "../features/home/components/HowItWorks";
 import { FaqSection } from "../features/home/components/FaqSection";
 
 export function HomePage() {
+  const navigate = useNavigate();
   const [dialogTopic, setDialogTopic] = useState<DialogTopic | null>(null);
 
   function startPlanning() {
-    setDialogTopic("start");
+    navigate("/signup");
   }
 
   return (
@@ -51,10 +53,10 @@ export function HomePage() {
                   Create your wedding workspace
                   <Icon name="arrow" />
                 </button>
-                <a href="#sample-workspace" className="button button-secondary">
+                <Link to="/login" className="button button-secondary">
                   <Icon name="eye" />
-                  Explore sample dashboard
-                </a>
+                  Open your workspace
+                </Link>
               </div>
               <div className="hero-reassurance">
                 <span>
@@ -68,7 +70,9 @@ export function HomePage() {
                 </span>
               </div>
             </div>
-            <WorkspacePreview />
+            <div className="home-setup-diagram">
+              <SetupDiagram />
+            </div>
             <div className="hero-afterword">
               <span className="handwritten-line" />
               <span>From the first family meeting to the last goodbye.</span>
@@ -110,10 +114,10 @@ export function HomePage() {
                   Let’s plan your wedding
                   <Icon name="arrow" />
                 </button>
-                <a href="#sample-workspace" className="closing-demo">
-                  Take a look around
+                <Link to="/login" className="closing-demo">
+                  Open your workspace
                   <Icon name="arrow" />
-                </a>
+                </Link>
               </div>
               <span className="closing-note">
                 Your people. Your plans. One happy place.

@@ -7,11 +7,13 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "typecheck": "tsc --noEmit",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "node --import tsx --test tests/*.test.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.2",
     "@tanstack/react-query": "^5.104.4",
+    "axios": "^1.20.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "react-hook-form": "^7.90.0",

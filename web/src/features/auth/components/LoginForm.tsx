@@ -1,3 +1,6 @@
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
+import { login } from "../../../lib/api";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -7,7 +10,16 @@ import type { LoginFormValues } from "../login-schema";
 
 export function LoginForm() {
   const [passwordVisible, setPasswordVisible] = useState(false);
-  const [previewSubmitted, setPreviewSubmitted] = useState(false);
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const mutation = useMutation({
+    mutationFn: login,
+    onSuccess: (user) => {
+      queryClient.clear();
+      queryClient.setQueryData(["auth-user"], user);
+      navigate("/app/setup", { replace: true });
+    },
+  });
   const {
     register,
     handleSubmit,
@@ -18,16 +30,11 @@ export function LoginForm() {
     mode: "onSubmit",
   });
 
-  // This milestone is UI only. No credentials are sent, logged, or persisted.
-  function submitPreview() {
-    setPreviewSubmitted(true);
-  }
-
   return (
     <form
       className="login-form"
-      onSubmit={handleSubmit(submitPreview)}
-      onChange={() => setPreviewSubmitted(false)}
+      onSubmit={handleSubmit((values) => mutation.mutate(values))}
+      onChange={() => mutation.reset()}
       noValidate
     >
       <div className="login-field">
@@ -92,24 +99,22 @@ export function LoginForm() {
         )}
       </div>
 
-      <button type="submit" className="button button-primary login-submit">
-        Log in
+      <button
+        type="submit"
+        disabled={mutation.isPending}
+        className="button button-primary login-submit"
+      >
+        {mutation.isPending ? "Logging in…" : "Log in"}
         <Icon name="arrow" />
       </button>
 
-      {previewSubmitted && (
-        <div className="login-preview-message" role="status">
-          <Icon name="circle-check" />
-          <p>
-            The form looks good. Sign-in is coming next; you haven’t been logged
-            in.
-          </p>
-        </div>
+      {mutation.isError && (
+        <p className="ws-form-error" role="alert">
+          {mutation.error.message}
+        </p>
       )}
-      <p className="login-preview-note">
-        You’re viewing a preview. Sign-in is coming soon.
-        <br />
-        No details are sent or saved.
+      <p className="login-session-note">
+        Your login uses a secure, HTTP-only session cookie.
       </p>
     </form>
   );

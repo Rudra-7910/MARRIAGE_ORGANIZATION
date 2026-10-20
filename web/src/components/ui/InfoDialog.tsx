@@ -6,24 +6,23 @@ export type DialogTopic = "start" | "privacy" | "terms" | "contact";
 
 const content = {
   start: {
-    title: "Your wedding workspace is coming next.",
+    title: "Begin your wedding workspace.",
     description:
-      "We’re getting your shared planning space ready. For now, explore the sample wedding and imagine your people, all on the same page.",
+      "Create an account, register your family, and add your wedding details.",
   },
   privacy: {
     title: "Your family’s space matters.",
     description:
-      "The full privacy policy will be available before account registration opens. This homepage preview does not collect registration details or send invitations.",
+      "The full privacy policy is being prepared. Wedding details saved in your account power your dashboard; the guest website displays the contact and ceremony details you choose to publish.",
   },
   terms: {
     title: "A few details before we begin.",
     description:
-      "The full terms will be available before the wedding workspace launches. The workspace shown on this homepage is a sample, with illustrative names and figures.",
+      "The full terms are being prepared. This application currently supports family setup, wedding details and a shared guest website.",
   },
   contact: {
     title: "We’re getting ready to celebrate.",
-    description:
-      "Contact details will be available when the wedding workspace opens. Until then, take a look around the sample wedding.",
+    description: "Support contact details will be added here when available.",
   },
 };
 
@@ -39,15 +38,9 @@ export function InfoDialog({ topic, onClose }: InfoDialogProps) {
     if (!topic && dialog?.open) dialog.close();
   }, [topic]);
 
-  function exploreSample() {
+  function openWorkspace() {
     onClose();
-    if (window.location.pathname !== "/") {
-      navigate("/#sample-workspace");
-      return;
-    }
-    document
-      .getElementById("sample-workspace")
-      ?.scrollIntoView({ behavior: "auto", block: "center" });
+    navigate("/app/setup");
   }
 
   return (
@@ -76,8 +69,8 @@ export function InfoDialog({ topic, onClose }: InfoDialogProps) {
           <span className="eyebrow">MAKE MY MARRIAGE</span>
           <h2 id="dialog-title">{content[topic].title}</h2>
           <p id="dialog-description">{content[topic].description}</p>
-          <button className="button button-primary" onClick={exploreSample}>
-            Explore the sample workspace
+          <button className="button button-primary" onClick={openWorkspace}>
+            Open your workspace
             <Icon name="arrow" />
           </button>
         </div>
