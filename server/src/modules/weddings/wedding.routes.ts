@@ -4,7 +4,7 @@ import { z } from "zod";
 import { Family, Wedding } from "./wedding.models.js";
 import { User } from "../auth/user.model.js";
 import { createSessionMiddleware, checkCsrf } from "../auth/auth.session.js";
-import { httpError } from "../../middleware/http-error.js";
+import { httpError } from "../../middleware/error-handler.js";
 
 const familyInput = z
   .object({
@@ -161,15 +161,13 @@ export function createWeddingRouter() {
   router.get("/dashboard", async (req, res) => {
     const data = await workspace(req);
     if (!data.wedding) {
-      res
-        .status(409)
-        .json({
-          error: {
-            code: "WEDDING_REQUIRED",
-            message: "Create your wedding to open the dashboard.",
-            redirectTo: "/app/setup",
-          },
-        });
+      res.status(409).json({
+        error: {
+          code: "WEDDING_REQUIRED",
+          message: "Create your wedding to open the dashboard.",
+          redirectTo: "/app/setup",
+        },
+      });
       return;
     }
     res.json({ data });

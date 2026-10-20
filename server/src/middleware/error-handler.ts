@@ -1,5 +1,9 @@
 import type { Request, Response, NextFunction } from "express";
 
+export function httpError(status: number, code: string, message: string) {
+  return Object.assign(new Error(message), { status, code, expose: true });
+}
+
 export function errorHandler(
   error: unknown,
   _req: Request,

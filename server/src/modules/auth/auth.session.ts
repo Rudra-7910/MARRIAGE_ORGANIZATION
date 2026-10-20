@@ -5,7 +5,7 @@ import MongoStore from "connect-mongo";
 import mongoose from "mongoose";
 import { isDatabaseReady } from "../../config/database.js";
 import { env } from "../../config/env.js";
-import { httpError } from "../../middleware/http-error.js";
+import { httpError } from "../../middleware/error-handler.js";
 
 declare module "express-session" {
   interface SessionData {

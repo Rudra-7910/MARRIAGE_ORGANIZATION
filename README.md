@@ -45,7 +45,11 @@ Invitations, expense tracking, a vendor directory, photo uploads, additional fun
 ```text
 web/src/
   app/App.tsx                  Public/account routes and lazy loading
-  features/auth/               Login form and account gate
+  pages/HomePage.tsx           Homepage sections in display order
+  pages/LoginPage.tsx          Login validation, form state and submission
+  pages/SignupPage.tsx         Signup validation, form state and submission
+  features/auth/               Account gate and shared login/signup story
+  features/home/data/          Homepage copy and content lists
   features/weddings/
     SetupPage.tsx              Family setup, wedding setup and flow diagram
     WeddingForm.tsx            Shared create/edit form
@@ -59,16 +63,20 @@ web/src/
   lib/weddings.ts              Wedding API calls and frontend types
   styles/                      Shared theme, login and wedding UI
 server/src/
-  modules/auth/                Routes, controller, sessions and User model
+  app.ts                       Route registration, request IDs and 404 handling
+  modules/auth/
+    auth.routes.ts            Auth validation, routes and handlers together
+    auth.session.ts           Shared session and CSRF configuration
+    user.model.ts             User schema and password hashing
   modules/weddings/
     wedding.models.ts          Family and Wedding models
     wedding.routes.ts          Setup, dashboard, edits and public projection
     wedding.test.ts            Isolated end-to-end API and RBAC checks
   config/                      Environment, MongoDB connection and indexes
-  middleware/                  Safe errors and request IDs
+  middleware/error-handler.ts  Shared HTTP error helper and error responses
 ```
 
-Small route handlers use Mongoose directly. No extra service/repository layer or global React context is required.
+Small route handlers use Mongoose directly. Page-specific form logic stays with its page; genuinely shared pieces such as the wedding form, brand, icons and Axios client remain separate. No extra service/repository layer or global React context is required.
 
 ## Verification
 

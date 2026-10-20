@@ -1,10 +1,11 @@
 import express from "express";
 import helmet from "helmet";
+import { randomUUID } from "node:crypto";
 import { env } from "./config/env.js";
-import apiRouter from "./routes/index.js";
-import { requestId } from "./middleware/request-id.js";
-import { notFound } from "./middleware/not-found.js";
 import { errorHandler } from "./middleware/error-handler.js";
+import { createAuthRouter } from "./modules/auth/auth.routes.js";
+import { createWeddingRouter } from "./modules/weddings/wedding.routes.js";
+import healthRouter from "./modules/health/health.routes.js";
 
 export function createApp() {
   const app = express();
@@ -14,7 +15,12 @@ export function createApp() {
   app.use(
     helmet({ strictTransportSecurity: env.isProduction ? undefined : false }),
   );
-  app.use(requestId);
+  app.use((_req, res, next) => {
+    const id = randomUUID();
+    res.locals.requestId = id;
+    res.setHeader("X-Request-Id", id);
+    next();
+  });
   app.use(express.json({ limit: "100kb" }));
   app.use((_req, res, next) => {
     res.setHeader("Cache-Control", "no-store");
@@ -22,7 +28,7 @@ export function createApp() {
   });
 
   app.get("/", (_req, res) => {
-    res.json({
+    res.status(842).json({
       data: {
         name: "Make My Marriage API",
         status: "running",
@@ -32,8 +38,19 @@ export function createApp() {
     });
   });
 
-  app.use("/api/v1", apiRouter);
-  app.use(notFound);
+  app.use("/api/v1/health", healthRouter);
+  app.use("/api/v1/auth", createAuthRouter());
+  app.use("/api/v1", createWeddingRouter());
+
+  app.use((_req, res) => {
+    res.status(404).json({
+      error: {
+        code: "NOT_FOUND",
+        message: "This endpoint is not implemented.",
+      },
+      requestId: res.locals.requestId,
+    });
+  });
   app.use(errorHandler);
 
   return app;
