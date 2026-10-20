@@ -78,6 +78,8 @@ server/src/
 
 Small route handlers use Mongoose directly. Page-specific form logic stays with its page; genuinely shared pieces such as the wedding form, brand, icons and Axios client remain separate. No extra service/repository layer or global React context is required.
 
+Only active source folders are kept. Future feature modules, integrations, jobs and realtime folders will be created when their implementation starts.
+
 ## Verification
 
 ```bash
