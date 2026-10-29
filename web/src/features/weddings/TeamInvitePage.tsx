@@ -8,12 +8,13 @@ import {
   acceptTeamInvite,
   previewTeamInvite,
   roleDescriptions,
+  teamInviteTokenSchema,
 } from "../../lib/team";
 
 export function TeamInvitePage() {
   const location = useLocation();
   const token = location.hash.slice(1);
-  const validToken = /^[a-f0-9]{64}$/.test(token);
+  const validToken = teamInviteTokenSchema.safeParse(token).success;
   const cache = useQueryClient();
   const navigate = useNavigate();
   const user = useQuery({

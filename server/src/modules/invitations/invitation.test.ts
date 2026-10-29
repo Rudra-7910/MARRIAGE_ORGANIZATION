@@ -17,9 +17,8 @@ test(
     process.env.TRUST_PROXY_CIDRS = "";
     process.env.RESEND_API_KEY = "test-placeholder-never-used-for-real-mail";
     process.env.RESEND_FROM = "Wedding <invitations@example.com>";
-    const { connectDatabase, disconnectDatabase } = await import(
-      "../../config/database.js"
-    );
+    const { connectDatabase, disconnectDatabase } =
+      await import("../../config/database.js");
     const { createApp } = await import("../../app.js");
     const { env } = await import("../../config/env.js");
     const { Guest } = await import("./invitation.model.js");
@@ -296,7 +295,10 @@ test(
     await t.test(
       "the server preview uses real wedding fields, escapes input, and rejects injected email fields",
       async () => {
-        const initial = await request(owner, root + "/" + guestId + "/invitation");
+        const initial = await request(
+          owner,
+          root + "/" + guestId + "/invitation",
+        );
         assert.ok(initial.body.data.subject.startsWith("शुभ विवाह निमंत्रण:"));
         assert.ok(initial.body.data.message.includes("सपरिवार पधारकर"));
         const result = await request(
@@ -311,8 +313,12 @@ test(
         assert.ok(!html.includes("<script>"));
         assert.ok(html.includes("Gupta &amp; Parivar"));
         assert.ok(html.includes("॥ श्री गणेशाय नमः ॥"));
-        assert.ok(result.body.data.text.includes("शुभ विवाह · स्नेहिल आमंत्रण"));
-        assert.ok(html.includes("14 March 2027 · 18:30 IST"));
+        assert.ok(
+          result.body.data.text.includes("स्नेहिल आमंत्रण · शुभ विवाह"),
+        );
+        assert.ok(html.includes("14 March 2027"));
+        assert.ok(result.body.data.text.includes("14 March 2027 · 18:30 IST"));
+        assert.ok(result.body.data.text.includes(draft.message));
         assert.ok(html.includes("26.9124%2C75.7873"));
         assert.ok(html.includes("/w/" + publicId));
         assert.ok(html.includes(weddingInput.youtube));
@@ -593,10 +599,15 @@ test(
           globalThis.fetch = async (url, init) => {
             assert.equal(url, "https://api.resend.com/emails");
             assert.equal(
-              (init!.headers as Record<string, string>)["Idempotency-Key"],
+              new Headers(init!.headers).get("Idempotency-Key"),
               "test-key",
             );
-            assert.deepEqual(JSON.parse(init!.body as string).to, [email.to]);
+            assert.equal(init!.method, "POST");
+            assert.ok(init!.signal instanceof AbortSignal);
+            assert.deepEqual(JSON.parse(init!.body as string), {
+              ...email,
+              to: [email.to],
+            });
             return new Response(body, { status });
           };
           assert.deepEqual(await sendWithResend(email, "test-key"), {
@@ -605,7 +616,11 @@ test(
           });
           for (const code of [400, 401, 403, 422, 429]) {
             status = code;
-            body = JSON.stringify({ message: "private provider credentials" });
+            body = JSON.stringify({
+              name: "validation_error",
+              statusCode: code,
+              message: "private provider credentials",
+            });
             const result = await sendWithResend(email, "test-key");
             assert.equal(result.status, "failed");
             assert.ok(
@@ -614,17 +629,24 @@ test(
           }
           for (const code of [408, 409, 500, 503]) {
             status = code;
+            body = JSON.stringify({
+              name: "application_error",
+              statusCode: code,
+              message: "private provider error",
+            });
             assert.equal(
               (await sendWithResend(email, "test-key")).status,
               "unconfirmed",
             );
           }
           status = 200;
-          body = "{}";
-          assert.equal(
-            (await sendWithResend(email, "test-key")).status,
-            "unconfirmed",
-          );
+          for (const malformed of [{}, { id: "" }, { id: 123 }, null]) {
+            body = JSON.stringify(malformed);
+            assert.equal(
+              (await sendWithResend(email, "test-key")).status,
+              "unconfirmed",
+            );
+          }
           globalThis.fetch = async () => {
             throw new Error("private socket error");
           };

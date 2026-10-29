@@ -3,6 +3,7 @@ import type { Request, Response, NextFunction, RequestHandler } from "express";
 import session from "express-session";
 import MongoStore from "connect-mongo";
 import mongoose from "mongoose";
+import { z } from "zod";
 import { isDatabaseReady } from "../../config/database.js";
 import { env } from "../../config/env.js";
 import { httpError } from "../../middleware/error-handler.js";
@@ -73,9 +74,8 @@ export function createSessionMiddleware(): RequestHandler {
     });
   };
 }
-export function csrfToken() {
-  return randomBytes(32).toString("hex");
-}
+const csrfTokenInput = z.hex().length(64).lowercase();
+
 export function checkCsrf(req: Request, _res: Response, next: NextFunction) {
   const origin = req.get("origin");
   if (origin && !env.allowedOrigins.includes(origin)) {
@@ -93,7 +93,7 @@ export function checkCsrf(req: Request, _res: Response, next: NextFunction) {
   if (
     !expected ||
     !received ||
-    !/^[a-f0-9]{64}$/.test(received) ||
+    !csrfTokenInput.safeParse(received).success ||
     received.length !== expected.length ||
     !timingSafeEqual(Buffer.from(received), Buffer.from(expected))
   ) {
@@ -113,7 +113,7 @@ export async function startUserSession(req: Request, userId: string) {
     req.session.regenerate((error) => (error ? reject(error) : resolve())),
   );
   req.session.userId = userId;
-  req.session.csrfToken = csrfToken();
+  req.session.csrfToken = randomBytes(32).toString("hex");
   await new Promise<void>((resolve, reject) =>
     req.session.save((error) => (error ? reject(error) : resolve())),
   );

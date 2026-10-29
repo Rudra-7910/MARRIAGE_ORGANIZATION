@@ -1,4 +1,5 @@
 import type { Request, Response, NextFunction } from "express";
+import { ZodError } from "zod";
 
 export function httpError(status: number, code: string, message: string) {
   return Object.assign(new Error(message), { status, code, expose: true });
@@ -18,6 +19,13 @@ export function errorHandler(
   let status = 500;
   let code = "INTERNAL_ERROR";
   let message = "An unexpected server error occurred.";
+
+  // Routes call schema.parse() directly; validation failures share one response.
+  if (error instanceof ZodError) {
+    status = 422;
+    code = "INVALID_INPUT";
+    message = error.issues[0]?.message || "Check your details.";
+  }
 
   if (error instanceof SyntaxError && "body" in error) {
     status = 400;

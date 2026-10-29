@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { randomBytes } from "node:crypto";
 import { rateLimit } from "express-rate-limit";
 import bcrypt from "bcryptjs";
 import mongoose from "mongoose";
@@ -8,7 +9,6 @@ import {
   checkCsrf,
   cookieName,
   cookieOptions,
-  csrfToken,
   startUserSession,
 } from "./auth.session.js";
 import { User } from "./user.model.js";
@@ -20,7 +20,7 @@ const email = z
   .trim()
   .toLowerCase()
   .max(254)
-  .email("Enter a valid email address.");
+  .pipe(z.email("Enter a valid email address."));
 
 // Password validations by Zod.
 const password = z
@@ -81,10 +81,10 @@ export function createAuthRouter() {
   router.use(createSessionMiddleware());
 
   router.get("/csrf", tokenLimit, (req, res) => {
-    if (!req.session.csrfToken) req.session.csrfToken = csrfToken();
+    if (!req.session.csrfToken)
+      req.session.csrfToken = randomBytes(32).toString("hex");
     res.json({ data: { token: req.session.csrfToken } });
   });
-
 
   router.get("/me", tokenLimit, async (req, res) => {
     if (!req.session.userId)
@@ -95,16 +95,8 @@ export function createAuthRouter() {
     res.json({ data: publicUser(user) });
   });
 
-  
   router.post("/signup", limit, checkCsrf, async (req, res) => {
-    const result = signupSchema.safeParse(req.body);
-    if (!result.success)
-      throw httpError(
-        422,
-        "INVALID_INPUT",
-        result.error.issues[0]?.message || "Check your signup details.",
-      );
-    const { name, email, password } = result.data;
+    const { name, email, password } = signupSchema.parse(req.body);
     let user;
     try {
       // The model's save hook hashes this before MongoDB receives the document.

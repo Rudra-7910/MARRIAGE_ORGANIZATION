@@ -15,44 +15,11 @@ import {
 } from "./wedding.models.js";
 
 type WeddingDocument = InstanceType<typeof Wedding>;
-const tokenInput = z
-  .object({ token: z.string().regex(/^[a-f0-9]{64}$/) })
-  .strict();
-const objectId = z.string().regex(/^[a-f0-9]{24}$/i);
+const tokenInput = z.object({ token: z.hex().length(64).lowercase() }).strict();
+const objectId = z
+  .string()
+  .refine(mongoose.isObjectIdOrHexString, "Enter a valid ID.");
 
-function tokenHash(token: string) {
-  return createHash("sha256").update(token).digest("hex");
-}
-function parse<T>(schema: z.ZodType<T>, input: unknown) {
-  const result = schema.safeParse(input);
-  if (!result.success)
-    throw httpError(422, "INVALID_INPUT", "Check the invitation details.");
-  return result.data;
-}
-function conflict() {
-  return httpError(
-    409,
-    "TEAM_CONFLICT",
-    "Team access changed. Refresh and try again.",
-  );
-}
-function unavailable() {
-  return httpError(
-    410,
-    "INVITE_UNAVAILABLE",
-    "This invitation is expired, revoked, or already used. Ask for a new link.",
-  );
-}
-async function requireCurrentWedding(userId: string) {
-  const wedding = await Wedding.findOne({ "members.userId": userId });
-  if (!wedding)
-    throw httpError(
-      409,
-      "WEDDING_REQUIRED",
-      "You do not belong to a wedding yet.",
-    );
-  return wedding;
-}
 function allowedRoles(wedding: WeddingDocument, userId: string) {
   if (wedding.createdBy.toString() === userId) return [...weddingRoles];
   if (canOrganize(roleFor(wedding, userId))) return ["Manager", "Worker"];
@@ -107,17 +74,27 @@ export function createTeamRouter() {
 
   // Read-only preview. The secret travels in the body, never in an API URL/log.
   router.post("/team-invites/preview", previewLimit, async (req, res) => {
-    const { token } = parse(tokenInput, req.body);
-    const hash = tokenHash(token);
+    const { token } = tokenInput.parse(req.body);
+    const hash = createHash("sha256").update(token).digest("hex");
     const wedding = await Wedding.findOne({ "teamInvites.tokenHash": hash });
     const invite = wedding?.teamInvites.find((item) => item.tokenHash === hash);
-    if (!wedding || !invite) throw unavailable();
+    if (!wedding || !invite)
+      throw httpError(
+        410,
+        "INVITE_UNAVAILABLE",
+        "This invitation is expired, revoked, or already used. Ask for a new link.",
+      );
     const active =
       !invite.revokedAt &&
       !invite.acceptedBy &&
       invite.expiresAt > new Date() &&
       allowedRoles(wedding, invite.invitedBy.toString()).includes(invite.role);
-    if (!active) throw unavailable();
+    if (!active)
+      throw httpError(
+        410,
+        "INVITE_UNAVAILABLE",
+        "This invitation is expired, revoked, or already used. Ask for a new link.",
+      );
     res.json({
       data: {
         brideName: wedding.brideName,
@@ -148,7 +125,13 @@ export function createTeamRouter() {
 
   router.get("/weddings/current/team", async (req, res) => {
     const userId = req.session.userId!;
-    const wedding = await requireCurrentWedding(userId);
+    const wedding = await Wedding.findOne({ "members.userId": userId });
+    if (!wedding)
+      throw httpError(
+        409,
+        "WEDDING_REQUIRED",
+        "You do not belong to a wedding yet.",
+      );
     const people = await User.find({
       _id: { $in: wedding.members.map((member) => member.userId) },
     })
@@ -208,12 +191,18 @@ export function createTeamRouter() {
     checkCsrf,
     createLimit,
     async (req, res) => {
-      const { role } = parse(
-        z.object({ role: z.enum(weddingRoles) }).strict(),
-        req.body,
-      );
+      const { role } = z
+        .object({ role: z.enum(weddingRoles) })
+        .strict()
+        .parse(req.body);
       const userId = req.session.userId!;
-      const wedding = await requireCurrentWedding(userId);
+      const wedding = await Wedding.findOne({ "members.userId": userId });
+      if (!wedding)
+        throw httpError(
+          409,
+          "WEDDING_REQUIRED",
+          "You do not belong to a wedding yet.",
+        );
       if (!allowedRoles(wedding, userId).includes(role))
         throw httpError(
           403,
@@ -233,7 +222,7 @@ export function createTeamRouter() {
         {
           $push: {
             teamInvites: {
-              tokenHash: tokenHash(token),
+              tokenHash: createHash("sha256").update(token).digest("hex"),
               role,
               invitedBy: userId,
               expiresAt,
@@ -243,7 +232,12 @@ export function createTeamRouter() {
         },
         { returnDocument: "after", runValidators: true },
       );
-      if (!updated) throw conflict();
+      if (!updated)
+        throw httpError(
+          409,
+          "TEAM_CONFLICT",
+          "Team access changed. Refresh and try again.",
+        );
       // Only returned at creation. The database keeps the hash, not a reusable link.
       res.status(201).json({
         data: {
@@ -257,12 +251,17 @@ export function createTeamRouter() {
   );
 
   router.post("/team-invites/accept", checkCsrf, async (req, res) => {
-    const { token } = parse(tokenInput, req.body);
-    const hash = tokenHash(token);
+    const { token } = tokenInput.parse(req.body);
+    const hash = createHash("sha256").update(token).digest("hex");
     const userId = req.session.userId!;
     const wedding = await Wedding.findOne({ "teamInvites.tokenHash": hash });
     const invite = wedding?.teamInvites.find((item) => item.tokenHash === hash);
-    if (!wedding || !invite) throw unavailable();
+    if (!wedding || !invite)
+      throw httpError(
+        410,
+        "INVITE_UNAVAILABLE",
+        "This invitation is expired, revoked, or already used. Ask for a new link.",
+      );
     const existingRole = roleFor(wedding, userId);
     if (
       invite.acceptedBy?.toString() === userId &&
@@ -277,7 +276,11 @@ export function createTeamRouter() {
       invite.expiresAt <= new Date() ||
       !allowedRoles(wedding, invite.invitedBy.toString()).includes(invite.role)
     )
-      throw unavailable();
+      throw httpError(
+        410,
+        "INVITE_UNAVAILABLE",
+        "This invitation is expired, revoked, or already used. Ask for a new link.",
+      );
     if (await Wedding.exists({ "members.userId": userId }))
       throw httpError(
         409,
@@ -340,7 +343,11 @@ export function createTeamRouter() {
         res.json({ data: { role: invite.role } });
         return;
       }
-      throw conflict();
+      throw httpError(
+        409,
+        "TEAM_CONFLICT",
+        "Team access changed. Refresh and try again.",
+      );
     }
     res.json({ data: { role: invite.role } });
   });
@@ -349,9 +356,15 @@ export function createTeamRouter() {
     "/weddings/current/team-invites/:id",
     checkCsrf,
     async (req, res) => {
-      const id = parse(objectId, req.params.id);
+      const id = objectId.parse(req.params.id);
       const userId = req.session.userId!;
-      const wedding = await requireCurrentWedding(userId);
+      const wedding = await Wedding.findOne({ "members.userId": userId });
+      if (!wedding)
+        throw httpError(
+          409,
+          "WEDDING_REQUIRED",
+          "You do not belong to a wedding yet.",
+        );
       const invite = wedding.teamInvites.id(id);
       if (!invite)
         throw httpError(
@@ -371,7 +384,12 @@ export function createTeamRouter() {
         { _id: wedding._id, __v: wedding.__v, "teamInvites._id": invite._id },
         { $set: { "teamInvites.$.revokedAt": new Date() }, $inc: { __v: 1 } },
       );
-      if (!updated.matchedCount) throw conflict();
+      if (!updated.matchedCount)
+        throw httpError(
+          409,
+          "TEAM_CONFLICT",
+          "Team access changed. Refresh and try again.",
+        );
       res.json({ data: null });
     },
   );
@@ -380,9 +398,15 @@ export function createTeamRouter() {
     "/weddings/current/members/:id",
     checkCsrf,
     async (req, res) => {
-      const id = parse(objectId, req.params.id);
+      const id = objectId.parse(req.params.id);
       const userId = req.session.userId!;
-      const wedding = await requireCurrentWedding(userId);
+      const wedding = await Wedding.findOne({ "members.userId": userId });
+      if (!wedding)
+        throw httpError(
+          409,
+          "WEDDING_REQUIRED",
+          "You do not belong to a wedding yet.",
+        );
       if (!wedding.members.some((item) => item.userId.toString() === id))
         throw httpError(404, "NOT_FOUND", "Member not found in your wedding.");
       if (!canRemove(wedding, userId, id))
@@ -408,14 +432,26 @@ export function createTeamRouter() {
           ],
         },
       );
-      if (!updated.matchedCount) throw conflict();
+      if (!updated.matchedCount)
+        throw httpError(
+          409,
+          "TEAM_CONFLICT",
+          "Team access changed. Refresh and try again.",
+        );
       res.json({ data: null });
     },
   );
 
   // Apply the finance guard before any budget response, including unknown subpaths.
   router.use("/weddings/current/budget", async (req, _res, next) => {
-    const wedding = await requireCurrentWedding(req.session.userId!);
+    const userId = req.session.userId!;
+    const wedding = await Wedding.findOne({ "members.userId": userId });
+    if (!wedding)
+      throw httpError(
+        409,
+        "WEDDING_REQUIRED",
+        "You do not belong to a wedding yet.",
+      );
     if (!canOrganize(roleFor(wedding, req.session.userId!)))
       throw httpError(
         403,

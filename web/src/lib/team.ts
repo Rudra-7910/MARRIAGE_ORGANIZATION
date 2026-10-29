@@ -1,4 +1,5 @@
 import { api, getCsrfHeaders } from "./api";
+import { z } from "zod";
 import type { WeddingRole } from "./weddings";
 
 export type Team = {
@@ -27,6 +28,7 @@ export type TeamInvite = {
   role: WeddingRole;
   expiresAt: string;
 };
+export const teamInviteTokenSchema = z.hex().length(64).lowercase();
 export const roleDescriptions: Record<WeddingRole, string> = {
   Admin:
     "Manage the wedding, guest invitations and private budget. Only the wedding creator controls Admin and Organizer membership.",
@@ -83,8 +85,8 @@ export async function acceptTeamInvite(token: string) {
 
 // Only this known continuation is allowed; never redirect to a supplied URL.
 export function inviteTokenFromState(state: unknown) {
-  if (!state || typeof state !== "object" || !("teamInviteToken" in state))
-    return "";
-  const token = state.teamInviteToken;
-  return typeof token === "string" && /^[a-f0-9]{64}$/.test(token) ? token : "";
+  const result = z
+    .object({ teamInviteToken: teamInviteTokenSchema })
+    .safeParse(state);
+  return result.success ? result.data.teamInviteToken : "";
 }

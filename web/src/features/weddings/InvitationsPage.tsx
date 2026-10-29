@@ -39,7 +39,10 @@ const emailSchema = z.object({
     .trim()
     .min(3, "Add an email subject.")
     .max(240)
-    .regex(/^[^\r\n]+$/, "Use one line for the subject."),
+    .refine(
+      (value) => !value.includes("\r") && !value.includes("\n"),
+      "Use one line for the subject.",
+    ),
   message: z.string().trim().min(1, "Add a personal note.").max(3000),
 });
 

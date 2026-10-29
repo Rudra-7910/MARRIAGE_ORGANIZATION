@@ -86,7 +86,7 @@ test(
       latitude: 28.61,
       longitude: 77.2,
       contactRole: "Family coordinator",
-      phone: "+919999000000",
+      phone: "+91 (99999) 00000",
       welcome: "Welcome to our celebration.",
       youtube: "",
     };
@@ -158,9 +158,15 @@ test(
       async () => {
         for (const body of [
           { ...input, date: "2027-02-30" },
+          { ...input, startTime: "24:00" },
+          { ...input, startTime: "20:30:00" },
+          { ...input, endTime: "12:60" },
+          { ...input, phone: "1234567" },
           { ...input, longitude: null },
           { ...input, members: [] },
           { ...input, youtube: "https://evil.example/video" },
+          { ...input, youtube: "https://youtube.com.evil.example/video" },
+          { ...input, youtube: "http://youtube.com/watch?v=abcdefghijk" },
         ])
           assert.equal(
             (await request(owner, "/weddings", "POST", body)).status,

@@ -126,7 +126,7 @@ server/src/
   modules/invitations/
     invitation.model.ts        Wedding-scoped guests and saved email attempts
     invitation.routes.ts       Guest edits, preview, send claims and safe retry
-    invitation.email.ts        Escaped email template and Resend HTTP transport
+    invitation.email.tsx       React Email template, plain text and Resend SDK
     invitation.test.ts         Isolated MongoDB and stub-provider integration tests
   config/                      Environment, MongoDB connection and indexes
   middleware/error-handler.ts  Shared HTTP error helper and error responses
@@ -134,7 +134,13 @@ server/src/
 
 Small route handlers use Mongoose directly. Page-specific form logic stays with its page; genuinely shared pieces such as the wedding form, brand, icons and Axios client remain separate. No extra service/repository layer or global React context is required.
 
-Wedding route handlers show their database queries directly. `workspaceData` only formats the shared response; it performs no I/O. Create/edit responses reuse returned Mongoose documents, with membership/version conditions and unique indexes retained. Team membership guards, guest-safe field selection, invitation leases and retry/idempotency rules remain shared where consistency matters. Team member lookup uses a map rather than repeatedly scanning the user list.
+To follow a request, start at the page's TanStack Query mutation/query, then the matching feature file in `web/src/lib`, then its Express route. Inside the route, `schema.parse(req.body)` validates input, the Mongoose query includes wedding membership/ownership, and `res.json({ data: ... })` sends the response. Zod validation errors become HTTP 422 in the shared error handler. Authentication and role checks run before private operations. There are no custom query or validation wrappers to follow.
+
+Standard formats use Zod's built-in date/time/hex/URL validators and Mongoose's ID validator. Phone checks use `libphonenumber-js` with India as the default country; formatted Indian and explicit international numbers are accepted when their length is possible for that country. This is format checking, not phone verification. Short/non-phone strings previously accepted by the basic regex are rejected on new saves. Paired coordinates, the HTTPS YouTube host allowlist and subject line-break restrictions remain explicit product rules.
+
+`invitation.email.tsx` contains both the readable JSX email and the Resend send call. React escapes inserted text; `@react-email/render` produces the HTML and plain-text alternative. The Resend SDK handles provider requests and typed responses. App-owned version checks, persisted send claims, idempotency keys and uncertain-result handling remain in `invitation.routes.ts`. Previously saved invitation payloads are reused unchanged on retries. No API key or email provider SDK is sent to the frontend.
+
+Wedding, team and guest route handlers show their database queries directly. `workspaceData` only formats the shared response; it performs no I/O. Create/edit responses reuse returned Mongoose documents, with membership/version conditions and unique indexes retained. Shared role rules, guest-safe field selection, invitation leases and retry/idempotency rules remain where consistency matters. Team member lookup uses a map rather than repeatedly scanning the user list. Guest search uses `escape-string-regexp` so typed search text is treated literally.
 
 Frontend endpoint functions use explicit Axios requests and return `response.data.data`. All writes use one `getCsrfHeaders` helper from `lib/api.ts`; it fetches a fresh token for the current session. Common API error messages also live there. Setup-only header/diagram markup stays in `SetupPage`; the shared login/signup story lives directly at `features/auth/LoginStory.tsx`. Stateful form/editor boundaries remain separate where keys and hooks protect unsaved input.
 

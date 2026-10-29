@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { Router } from "express";
 import mongoose from "mongoose";
+import escapeStringRegexp from "escape-string-regexp";
 import { rateLimit } from "express-rate-limit";
 import { z } from "zod";
 import { env } from "../../config/env.js";
@@ -24,7 +25,6 @@ const guestInput = z
   })
   .strict();
 
-
 const versionInput = z.object({ version: z.number().int().min(0) }).strict();
 
 const emailInput = versionInput
@@ -35,7 +35,10 @@ const emailInput = versionInput
       .trim()
       .min(3)
       .max(240)
-      .regex(/^[^\r\n]+$/, "Subject must be a single line."),
+      .refine(
+        (value) => !value.includes("\r") && !value.includes("\n"),
+        "Subject must be a single line.",
+      ),
     message: z.string().trim().min(1).max(3000),
   })
   .strict();
@@ -43,30 +46,17 @@ const leaseMs = 60000;
 // Resend keeps idempotency keys for 24h. Stop earlier to allow for clock/network drift.
 const retryWindowMs = 23 * 60 * 60 * 1000;
 
-function parse<T>(schema: z.ZodType<T>, value: unknown): T {
-  const result = schema.safeParse(value);
-  if (!result.success)
-    throw httpError(422, "INVALID_INPUT", result.error.issues[0].message);
-  return result.data;
-}
-
-//status nikal ,  of email
-
-function statusFor(guest: InstanceType<typeof Guest>) {
-  const invitation = guest.invitation;
-  if (!invitation) return "not_sent";
-  if (
-    invitation.status === "sending" &&
-    invitation.leaseUntil.getTime() <= Date.now()
-  )
-    return "unconfirmed";
-  return invitation.status;
-}
-
-
 function guestDetails(guest: InstanceType<typeof Guest>) {
   const invitation = guest.invitation;
-  const status = statusFor(guest);
+  let status = invitation?.status || "not_sent";
+  // A crashed send can outlive its lease without a confirmed provider result.
+  if (
+    invitation &&
+    status === "sending" &&
+    invitation.leaseUntil.getTime() <= Date.now()
+  ) {
+    status = "unconfirmed";
+  }
   const active =
     invitation &&
     invitation.leaseUntil.getTime() > Date.now() &&
@@ -84,8 +74,8 @@ function guestDetails(guest: InstanceType<typeof Guest>) {
     canEdit: !invitation || (status === "failed" && !invitation.uncertain),
     canRetry: Boolean(
       invitation &&
-        !active &&
-        (status === "failed" || (status === "unconfirmed" && inWindow)),
+      !active &&
+      (status === "failed" || (status === "unconfirmed" && inWindow)),
     ),
     lastAttemptAt: invitation?.lastAttemptAt.toISOString() || null,
     submittedAt: invitation?.submittedAt?.toISOString() || null,
@@ -98,25 +88,6 @@ function guestDetails(guest: InstanceType<typeof Guest>) {
         : invitation?.error || "",
   };
 }
-async function findGuest(
-  id: string | string[],
-  wedding: mongoose.Types.ObjectId,
-) {
-  if (typeof id !== "string" || !mongoose.isObjectIdOrHexString(id))
-    throw httpError(404, "GUEST_NOT_FOUND", "This guest could not be found.");
-  const guest = await Guest.findOne({ _id: id, wedding });
-  if (!guest)
-    throw httpError(404, "GUEST_NOT_FOUND", "This guest could not be found.");
-  return guest;
-}
-function conflict() {
-  return httpError(
-    409,
-    "INVITATION_CONFLICT",
-    "This guest or invitation changed. Reload it before continuing.",
-  );
-}
-
 export function createInvitationRouter(
   sendEmail: EmailSender = sendWithResend,
 ) {
@@ -153,19 +124,23 @@ export function createInvitationRouter(
     next();
   });
 
+  router.param("id", (_req, _res, next, id) => {
+    if (!mongoose.isObjectIdOrHexString(id))
+      throw httpError(404, "GUEST_NOT_FOUND", "This guest could not be found.");
+    next();
+  });
+
   router.get("/", async (req, res) => {
     const wedding = res.locals.wedding as InstanceType<typeof Wedding>;
-    const query = parse(
-      z
-        .object({
-          page: z.coerce.number().int().min(1).max(10000).default(1),
-          search: z.string().trim().max(100).default(""),
-          side: z.enum(["All", "Bride", "Groom", "Both"]).default("All"),
-        })
-        .strict(),
-      req.query,
-    );
-    const escapedSearch = query.search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const query = z
+      .object({
+        page: z.coerce.number().int().min(1).max(10000).default(1),
+        search: z.string().trim().max(100).default(""),
+        side: z.enum(["All", "Bride", "Groom", "Both"]).default("All"),
+      })
+      .strict()
+      .parse(req.query);
+    const escapedSearch = escapeStringRegexp(query.search);
     const filter = {
       wedding: wedding._id,
       ...(query.side === "All" ? {} : { side: query.side }),
@@ -229,18 +204,28 @@ export function createInvitationRouter(
   });
   router.post("/", checkCsrf, async (req, res) => {
     const wedding = res.locals.wedding as InstanceType<typeof Wedding>;
-    const values = parse(guestInput, req.body);
+    const values = guestInput.parse(req.body);
     const guest = await Guest.create({ ...values, wedding: wedding._id });
     res.status(201).json({ data: guestDetails(guest) });
   });
   router.patch("/:id", checkCsrf, async (req, res) => {
     const wedding = res.locals.wedding as InstanceType<typeof Wedding>;
-    const values = parse(
-      guestInput.extend({ version: z.number().int().min(0) }).strict(),
-      req.body,
-    );
-    const guest = await findGuest(req.params.id, wedding._id);
-    if (guest.__v !== values.version) throw conflict();
+    const values = guestInput
+      .extend({ version: z.number().int().min(0) })
+      .strict()
+      .parse(req.body);
+    const guest = await Guest.findOne({
+      _id: req.params.id,
+      wedding: wedding._id,
+    });
+    if (!guest)
+      throw httpError(404, "GUEST_NOT_FOUND", "This guest could not be found.");
+    if (guest.__v !== values.version)
+      throw httpError(
+        409,
+        "INVITATION_CONFLICT",
+        "This guest or invitation changed. Reload it before continuing.",
+      );
     if (!guestDetails(guest).canEdit)
       throw httpError(
         409,
@@ -260,16 +245,26 @@ export function createInvitationRouter(
       },
       { returnDocument: "after", runValidators: true },
     );
-    if (!updated) throw conflict();
+    if (!updated)
+      throw httpError(
+        409,
+        "INVITATION_CONFLICT",
+        "This guest or invitation changed. Reload it before continuing.",
+      );
     res.json({ data: guestDetails(updated) });
   });
   router.get("/:id/invitation", async (req, res) => {
     const wedding = res.locals.wedding as InstanceType<typeof Wedding>;
-    const guest = await findGuest(req.params.id, wedding._id);
+    const guest = await Guest.findOne({
+      _id: req.params.id,
+      wedding: wedding._id,
+    });
+    if (!guest)
+      throw httpError(404, "GUEST_NOT_FOUND", "This guest could not be found.");
     const draft = guest.invitation || invitationDefaults(wedding);
     const rendered =
       guest.invitation ||
-      renderInvitation(wedding, guest, draft.subject, draft.message);
+      (await renderInvitation(wedding, guest, draft.subject, draft.message));
     res.json({
       data: {
         guest: guestDetails(guest),
@@ -283,10 +278,19 @@ export function createInvitationRouter(
   });
   router.post("/:id/preview", checkCsrf, async (req, res) => {
     const wedding = res.locals.wedding as InstanceType<typeof Wedding>;
-    const values = parse(emailInput, req.body);
-    const guest = await findGuest(req.params.id, wedding._id);
+    const values = emailInput.parse(req.body);
+    const guest = await Guest.findOne({
+      _id: req.params.id,
+      wedding: wedding._id,
+    });
+    if (!guest)
+      throw httpError(404, "GUEST_NOT_FOUND", "This guest could not be found.");
     if (guest.__v !== values.version || wedding.__v !== values.weddingVersion)
-      throw conflict();
+      throw httpError(
+        409,
+        "INVITATION_CONFLICT",
+        "This guest or invitation changed. Reload it before continuing.",
+      );
     if (guest.invitation)
       throw httpError(
         409,
@@ -294,7 +298,12 @@ export function createInvitationRouter(
         "An existing attempt uses its saved email preview.",
       );
     res.json({
-      data: renderInvitation(wedding, guest, values.subject, values.message),
+      data: await renderInvitation(
+        wedding,
+        guest,
+        values.subject,
+        values.message,
+      ),
     });
   });
 
@@ -323,13 +332,30 @@ export function createInvitationRouter(
           "Email sending is not configured. Add RESEND_API_KEY and RESEND_FROM to server/.env and restart the server.",
         );
       const wedding = res.locals.wedding as InstanceType<typeof Wedding>;
-      const retry = /\/retry\/?$/.test(req.path);
-      const values = parse(retry ? versionInput : emailInput, req.body);
-      const guest = await findGuest(req.params.id, wedding._id);
-      if (guest.__v !== values.version) throw conflict();
+      const retry = req.path.endsWith("/retry") || req.path.endsWith("/retry/");
+      const draft = retry ? null : emailInput.parse(req.body);
+      const version = draft
+        ? draft.version
+        : versionInput.parse(req.body).version;
+      const guest = await Guest.findOne({
+        _id: req.params.id,
+        wedding: wedding._id,
+      });
+      if (!guest)
+        throw httpError(
+          404,
+          "GUEST_NOT_FOUND",
+          "This guest could not be found.",
+        );
+      if (guest.__v !== version)
+        throw httpError(
+          409,
+          "INVITATION_CONFLICT",
+          "This guest or invitation changed. Reload it before continuing.",
+        );
       const now = new Date();
       let invitation = guest.toObject().invitation;
-      if (retry) {
+      if (!draft) {
         if (!invitation || !guestDetails(guest).canRetry)
           throw httpError(
             409,
@@ -357,8 +383,12 @@ export function createInvitationRouter(
         invitation.leaseId = randomUUID();
         invitation.error = "";
       } else {
-        const draft = parse(emailInput, req.body);
-        if (wedding.__v !== draft.weddingVersion) throw conflict();
+        if (wedding.__v !== draft.weddingVersion)
+          throw httpError(
+            409,
+            "INVITATION_CONFLICT",
+            "This guest or invitation changed. Reload it before continuing.",
+          );
         if (invitation)
           throw httpError(
             409,
@@ -372,7 +402,12 @@ export function createInvitationRouter(
           to: guest.email,
           subject: draft.subject,
           message: draft.message,
-          ...renderInvitation(wedding, guest, draft.subject, draft.message),
+          ...(await renderInvitation(
+            wedding,
+            guest,
+            draft.subject,
+            draft.message,
+          )),
           status: "sending",
           firstAttemptAt: now,
           lastAttemptAt: now,
@@ -385,11 +420,16 @@ export function createInvitationRouter(
       }
       // The version condition atomically claims this guest across organizers and servers.
       const claimed = await Guest.findOneAndUpdate(
-        { _id: guest._id, wedding: wedding._id, __v: values.version },
+        { _id: guest._id, wedding: wedding._id, __v: version },
         { $set: { invitation }, $inc: { __v: 1 } },
         { returnDocument: "after", runValidators: true },
       );
-      if (!claimed) throw conflict();
+      if (!claimed)
+        throw httpError(
+          409,
+          "INVITATION_CONFLICT",
+          "This guest or invitation changed. Reload it before continuing.",
+        );
       let result: SendResult;
       try {
         result = await sendEmail(
@@ -434,7 +474,12 @@ export function createInvitationRouter(
         },
         { returnDocument: "after", runValidators: true },
       );
-      if (!finished) throw conflict();
+      if (!finished)
+        throw httpError(
+          409,
+          "INVITATION_CONFLICT",
+          "This guest or invitation changed. Reload it before continuing.",
+        );
       res.json({ data: guestDetails(finished) });
     },
   );
