@@ -36,6 +36,7 @@ export function App() {
       departments: "Teams & Services",
       budget: "Budget & Expenses",
       guests: "Guests & Invitations",
+      invitation: "Send email invitation",
       photos: "Photos",
       services: "Find Services",
       members: "People & Access",

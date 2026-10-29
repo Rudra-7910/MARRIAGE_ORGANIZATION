@@ -1,6 +1,6 @@
 # Make My Marriage — Product Requirements Document
 
-Version: 1.3 · Updated: 14 October 2026 · Status: Planning baseline
+Version: 1.4 · Updated: 29 October 2026 · Status: Product baseline with incremental implementation
 
 ## 1. Product summary
 
@@ -8,7 +8,7 @@ Make My Marriage is an organizer-first web application for Indian weddings. It c
 
 Its primary job is to reduce repeated calls and manual follow-up: organizers should see service progress, outstanding decisions, deadlines, contacts, and private expenditure in one place. Guests should be able to access relevant wedding information without registering or completing forms.
 
-This document specifies V1. It does not authorize deployment, actual invitation delivery, or implementation.
+This document records the product scope. Account/family/wedding setup, the dashboard gate, public wedding details and basic manual email invitations are implemented. Other sections remain planned. Development tests do not send invitations to real recipients; production deployment remains a separate step.
 
 ## 2. Goals and boundaries
 
@@ -145,17 +145,16 @@ Membership removal must revoke API and Socket.IO access. Authenticated users lac
 
 ### FR8 — Guests and email invitations
 
-- Organizers maintain individuals or family groups, email addresses for invitation delivery, optional phone numbers, bride/groom affiliation, optional member names, optional estimated size, and selected functions.
-- Counts are planning estimates and never enforce admission limits.
-- Guests have no login, RSVP, mandatory text entry, or attendance response workflow.
-- Upload a prepared invitation image and associate it with an email template and personalized invitation link.
-- Organizer selects recipients, reviews the campaign, and starts automated email delivery.
-- Use a transactional email provider with a configured sending domain. Resend is the proposed provider, following the reference screenshot; provider selection is not yet explicitly confirmed. Guest email verification is not required.
-- Store queued, submitted, delivered when reported, bounced, and failed delivery states. Provider acceptance is not proof of inbox delivery; do not depend on email-open tracking.
-- Process delivery callbacks idempotently and expose failures to organizers for deliberate retry.
-- Invitation links are opaque and unguessable. They show only assigned functions, not the guest database or internal workspace.
-- Forwarded links reveal the same invitation; V1 does not verify the recipient's identity. Organizers can revoke/reissue a link.
-- WhatsApp invitation delivery and automated guest reminder campaigns are excluded from V1.
+- This wedding’s Organizers maintain individual/family entries with name, email and Bride/Groom/Both side; search, filtering, pagination and edits use real persisted data. Workers and Managers cannot access the guest directory or send invitations in current V1.
+- One family entry can represent multiple people. No admission count or restrictions; no guest account, RSVP or mandatory attendance response.
+- Organizer opens one saved family, edits the email subject and plain-text personal note, reviews the live preview, then chooses **Send invitation now**.
+- The server automatically includes real couple names, ceremony date/time in IST, venue/address, Google Maps directions from saved coordinates/address, contact role/phone, optional YouTube link and `/w/:publicId` guest website.
+- Resend is selected. Its API key and verified-domain sender are configured server-side. Without them, saving/preview work and sending is blocked with a clear explanation.
+- Save the exact email before the provider request. Statuses: Not sent, Submitting, Submitted, Failed and Unconfirmed. Submitted means accepted by Resend, not delivered to an inbox. No delivery/open tracking in current V1.
+- Concurrent sends are deduplicated per guest using an atomic version claim and provider idempotency key. Failed/uncertain outcomes have a deliberate safe retry where possible. Unknown attempts outside the provider's safe key window are blocked for investigation rather than blindly resent.
+- One submitted invitation per family entry in V1. Rejected entries can be corrected; submitted/uncertain content is locked so retries preserve the same payload. Updating the wedding updates the linked website; it does not rewrite previously sent email.
+- The public wedding link exposes public wedding information only; no private guest database. Guest-specific ceremony grants/revocation, invitation image uploads and campaign controls are not implemented by this increment.
+- V2: bulk campaigns, queues/BullMQ, scheduling, automated retries/reminders and delivery webhooks. WhatsApp delivery is excluded from current V1.
 
 ### FR9 — Guest website and announcements
 
@@ -209,7 +208,7 @@ Membership removal must revoke API and Socket.IO access. Authenticated users lac
 | Livestream | YouTube Live embedded player |
 | Architecture | One repository, modular monolith, shared worker code |
 | Hosting | AWS confirmed; deployment will be learned and implemented incrementally alongside the project. Individual services and topology remain to be selected. |
-| Invitation email | Transactional email provider; Resend proposed |
+| Invitation email | Resend; immediate per-family Express request, no queue in current V1 |
 | Location | Google Places for selection; MongoDB geospatial queries for nearby registered providers |
 
 Use feature-based Express routers and handlers, extracting service functions where useful. Avoid unnecessary controller/repository layers and Context-based state architectures. Use ordinary React hooks and TanStack Query for server state.
@@ -264,7 +263,7 @@ Wedding-owned records carry wedding scope. Money uses integer minor units or an 
 | Provider access | Adding directory details grants no private access; explicit membership is required. |
 | Outside vendor | Organizer adds and manages a vendor without generating an account. |
 | Guest access | Invitation opens without registration and exposes only assigned functions. No RSVP is requested. |
-| Invitations | Organizer-approved campaign queues email messages, tracks outcomes, and shows delivery failures. |
+| Invitations | Organizer previews and sends one saved family invitation; outcome persists, concurrent sends deduplicate, failed/uncertain results receive safe deliberate retry. Missing keys never produce fake success. |
 | Gallery privacy | Pending/rejected assets cannot be retrieved through public gallery URLs; only organizers approve. |
 | Public gallery | Approved photos can be viewed/downloaded without login. |
 | Finances | Service and wedding totals agree with recorded payments; unauthorized responses omit financial data. |

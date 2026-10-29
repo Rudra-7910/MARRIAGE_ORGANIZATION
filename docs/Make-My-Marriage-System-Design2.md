@@ -1,8 +1,46 @@
 # Make My Marriage — System Design
 
-Version 1.1 · Updated 11 October 2026
+Version 1.2 · Updated 29 October 2026
 
 Status: Architecture review draft. Confirmed choices are distinguished from proposals. This document designs the application; it does not implement or deploy it.
+
+**Current implementation amendment:** Account → family → wedding → dashboard and public wedding reads are running. Basic guest management and immediate per-family Resend invitations are now implemented as described below. The historical batch/campaign/worker/reminder flows later in this document remain future design, not current V1 behavior. They must not be used to introduce scheduling or BullMQ into this increment. Current sessions use express-session/connect-mongo; MongoDB Atlas/Mongoose remains the source of truth.
+
+### Current V1 invitation process and stack
+
+```mermaid
+flowchart LR
+  G[Organizer: saved guest / family] --> C[React composer + RHF / Zod]
+  C --> P[Axios + session cookie + CSRF]
+  P --> A[Express: current wedding Organizer check]
+  A --> V[Shared server HTML preview]
+  A --> M[(Mongoose: Guest + frozen invitation)]
+  M --> S[Atomic version claim / 60-second lease]
+  S --> R[Resend HTTPS API + stable idempotency key]
+  R --> O[Persist Submitted / Failed / Unconfirmed]
+  O --> Q[TanStack Query refresh]
+  R --> E[Guest email links to /w/publicId]
+  E --> W[Public wedding API: latest MongoDB details]
+```
+
+| Process | Frontend / transport | Backend / persistence |
+|---|---|---|
+| Open guest directory | React Router `/app/guests`; TanStack Query; Axios | Express session identifies user. MongoDB membership must be Organizer for this wedding. Scoped paginated Guest query returns safe fields and summary. |
+| Add/edit family | React Hook Form + Zod; CSRF-protected POST/PATCH | Backend strict Zod schema; server assigns wedding ID. Mongoose persists name/email/side. Version condition rejects stale edits. Submitted/uncertain recipients cannot be changed. |
+| Open composer | `/app/guests/:guestId/invitation`; no fixture fallback | Scoped GET returns saved guest, defaults or frozen attempt, wedding version and configured boolean. Credentials never leave the server. |
+| Live preview | Debounced subject/note; Axios POST; sandboxed iframe | Same escaped HTML/text renderer as delivery, using actual wedding names/date/venue, map coordinates, contact and optional YouTube link. No provider call. |
+| Send now | Disabled while pending; no client automatic retry | Validate session, CSRF, role and expected guest/wedding versions; per-account send limit. Persist full email snapshot and atomically increment guest version to claim it before contacting Resend. |
+| Provider acceptance | UI shows **Submitted**, never Delivered | Node fetch to fixed Resend API with 10-second timeout and persisted idempotency key. Save provider ID/time privately. No webhook in this increment. |
+| Definite rejection | **Failed**, readable reason, deliberate retry | Persist safe error text, not raw provider diagnostics. Correcting a failed guest clears that rejected draft. A retry otherwise keeps the exact saved payload. |
+| Timeout/process crash | **Unconfirmed**; check Resend and refresh status | Network/5xx/ambiguous responses do not imply rejection. A 60-second abandoned lease becomes unconfirmed when read. Retry claims a new lease with the same key/payload. Completion matches lease ID. |
+| Retry boundary | Only show Retry when API says `canRetry` | Conservative 23-hour window within Resend's documented 24-hour key lifetime. Old uncertain attempts are blocked for investigation. No automatic retries or background workers. |
+| Guest opens email | Website link without registration | Existing `/w/:publicId` and public wedding API return public fields only. Current wedding edits appear there; old email snapshots remain unchanged. |
+
+The Guest document embeds one current invitation snapshot. Fields include wedding scope, normalized recipient name/email/side and version; invitation includes random provider key, lease ID/deadline, frozen sender/recipient/subject/note/HTML/text, outcome, uncertainty marker, timestamps and provider ID. A compound wedding/createdAt/_id index supports the directory. No new queue, Redis, scheduler or session system is added. All required indexes are built during database startup.
+
+`RESEND_API_KEY` and `RESEND_FROM` are optional environment settings until sending is enabled. Missing configuration returns 503 for Send/Retry while guest management and preview remain available. `APP_ORIGIN` generates the guest URL and must be the reachable HTTPS production origin for real recipients. No production mock-success mode exists.
+
+Tests use disposable MongoDB, real HTTP/session/CSRF behavior and an injected stub email sender. They check role/tenant isolation, escaped preview, version conflicts, concurrent sends, persisted outcomes and frozen retries without emailing anyone. This implementation does not claim distributed exactly-once delivery or confirmed inbox delivery.
 
 Product baseline: [PRD v1.2](./Make-My-Marriage-PRD.md). Later discussion clarifies the application routes, session behavior, R2 storage, and location search. Where the PRD contains older assumptions, the decision table below controls this design.
 

@@ -21,10 +21,10 @@ import { WeddingForm } from "./WeddingForm";
 import { DashboardLayout } from "./DashboardLayout";
 import { WeddingOverview } from "./WeddingOverview";
 import { ServicesPage } from "./ServicesPage";
+import { GuestsPage, InvitationPage } from "./InvitationsPage";
 import {
   BudgetPage,
   FunctionsPage,
-  GuestsPage,
   GuestWebsitePage,
   PeoplePage,
   PhotosPage,
@@ -96,7 +96,26 @@ function WeddingWorkspace({ user }: { user: AuthUser }) {
             organizer ? <BudgetPage /> : <Navigate to="/app/overview" replace />
           }
         />
-        <Route path="guests" element={<GuestsPage />} />
+        <Route
+          path="guests"
+          element={
+            organizer ? (
+              <GuestsPage userId={user.id} />
+            ) : (
+              <Navigate to="/app/overview" replace />
+            )
+          }
+        />
+        <Route
+          path="guests/:guestId/invitation"
+          element={
+            organizer ? (
+              <InvitationPage userId={user.id} data={data} />
+            ) : (
+              <Navigate to="/app/overview" replace />
+            )
+          }
+        />
         <Route
           path="services"
           element={<ServicesPage wedding={data.wedding} />}

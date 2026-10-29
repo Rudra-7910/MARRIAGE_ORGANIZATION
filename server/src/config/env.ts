@@ -89,4 +89,7 @@ export const env = {
   appOrigin,
   allowedOrigins,
   trustedProxies,
+  // Optional until invitations are enabled. These values never go to the browser.
+  resendApiKey: (process.env.RESEND_API_KEY || "").trim(),
+  resendFrom: (process.env.RESEND_FROM || "").trim(),
 };

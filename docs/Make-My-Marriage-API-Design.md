@@ -1,16 +1,40 @@
 # Make My Marriage — API Design
 
-Version 1.0 · 15 October 2026 · Status: Discussion draft
+Version 1.1 · Updated 29 October 2026 · Status: Implementation notes plus broader planning draft
 
-This document records the API draft discussed in chat. It contains **59 proposed REST endpoints**, counting each HTTP method and path separately. No APIs have been implemented. Endpoint names, payloads, success codes, and unresolved policies remain review proposals.
+The tables A01–A59 retain **59 proposed REST endpoints** from the broader product discussion. They are not a count of implemented APIs. Authentication, health, family/wedding setup, dashboard and public wedding reads are implemented; the seven invitation endpoints below are now implemented. The current API uses `/weddings/current` for private wedding scope, derived from the signed-in account. Proposed `/app/weddings/:wid` routes below should not be used as current integration instructions.
 
-References: [PRD v1.3](./Make-My-Marriage-PRD.md) and [System Design v1.1](./Make-My-Marriage-System-Design.md).
+References: [PRD](./Make-My-Marriage-PRD.md) and [System Design](./Make-My-Marriage-System-Design2.md).
+
+## Implemented manual email invitations — V1
+
+All paths are relative to `/api/v1/weddings/current/guests`. Every request requires an existing account session and **Organizer membership in the current wedding**, checked in MongoDB. All POST/PATCH requests additionally require a valid `X-CSRF-Token` from `/api/v1/auth/csrf` and an allowed Origin. Worker/Manager requests return 403; records from other weddings return 404. Clients cannot supply wedding ownership, roles, sender addresses or provider keys.
+
+| Method | Path | Input / output |
+|---|---|---|
+| GET | `/` | Query `page` (default 1), `search` (max 100), `side=All|Bride|Groom|Both`. Returns up to 20 guests, matching total/page, whole-wedding summary, `emailConfigured`. |
+| POST | `/` | `{name,email,side}` → 201 saved guest. Email normalized; duplicate inboxes allowed intentionally. |
+| PATCH | `/:id` | `{name,email,side,version}` → updated guest. Reject stale versions (409). Only unsent/definitely rejected entries can be edited. Editing a failed entry clears its rejected email draft. |
+| GET | `/:id/invitation` | Guest, default/saved subject and note, server-rendered HTML, wedding version, `emailConfigured`. |
+| POST | `/:id/preview` | `{subject,message,version,weddingVersion}` → `{html,text}` using actual wedding details. No delivery or persistence. Existing attempts use their saved preview instead. |
+| POST | `/:id/send` | Same input as preview. Save immutable email snapshot, atomically claim the guest version, await Resend, persist and return the outcome. |
+| POST | `/:id/retry` | `{version}` only. Reuse saved recipient/content/sender/key; no new email body accepted. |
+
+Guest response fields: `id,name,email,side,version,status,canEdit,canRetry,lastAttemptAt,submittedAt,error`. Status is `not_sent|sending|submitted|failed|unconfirmed`. List responses exclude raw provider payload, sender, keys and provider message IDs. The Organizer-only invitation detail includes HTML for the sandboxed preview. The public wedding endpoint never exposes guest emails or attempts.
+
+Success envelope remains `{data:...}`. Known send failures return 200 **with a persisted `failed` or `unconfirmed` outcome**, not a fabricated success. `submitted` proves provider acceptance only. Validation is 422; absent authentication 401; permission/origin/CSRF rejection 403; missing guest 404; stale/already-attempted/locked/retry-unavailable 409; send quota 429; missing provider configuration 503. Unexpected storage failures return a generic 500 and request ID. Reload status after a transport/storage error before retrying.
+
+Subjects are single-line, 3–240 characters; notes 1–3000. HTML escapes all user-controlled strings. Preview and send use the same renderer. Send/retry share a per-account limit of 10 requests/minute in the current single-process deployment. This limiter is not a distributed quota.
+
+Each guest has one current invitation snapshot in MongoDB. An atomic version claim prevents simultaneous organizers from sending it twice. A 60-second lease protects in-flight attempts; expired leases read as unconfirmed. Completion writes match the claim's lease ID so a delayed response cannot overwrite a newer retry. Resend receives a stable idempotency key with the exact same payload on retries. Ambiguous attempts are retryable only inside a conservative 23-hour window; older ones require provider-side investigation. A definitely rejected attempt can receive a fresh key after expiry. There is no blanket exactly-once guarantee across provider expiry or different guest entries.
+
+Configure `RESEND_API_KEY` and `RESEND_FROM` in `server/.env`. `APP_ORIGIN` builds `/w/:publicId` links. Missing credentials permit guest management/preview but block sends. Queues, scheduling, bulk send, guest-specific function tokens, card uploads and delivery webhooks remain future work; the A43–A45 campaign proposals below do not apply to current V1.
 
 ## 1. Scope and technology
 
 TypeScript, Vite/React, React Router, React Hook Form/Zod, TanStack Query, Node.js/Express, MongoDB Atlas/Mongoose, Express sessions, Socket.IO, Cloudflare R2, Google Places, Google Cloud Translation, YouTube Live, and AWS hosting.
 
-Resend is the proposed email provider. MongoDB-backed jobs and an in-process runner are proposals. Exact session-store library, R2 bucket layout, and AWS deployment services have not been finalized.
+Resend is the selected and implemented invitation provider. Current V1 sends immediately through Express; campaign jobs, bulk scheduling and BullMQ are deferred to V2. Sessions use express-session/connect-mongo. R2 layout and AWS deployment services remain future work.
 
 Guest invitations are email-based. Guests do not register or RSVP. Provider discovery/contact does not create bookings. There is no online payment processing, seat locking, transport/accommodation management, or custom video streaming.
 

@@ -48,7 +48,7 @@ export function WeddingOverview({ data }: { data: Workspace }) {
           <div>
             <small>GUEST EMAIL INVITES</small>
             <strong>Your people, together</strong>
-            <span>Invitation tracking coming soon</span>
+            <span>Save families & send personal invitations</span>
           </div>
           <Icon name="arrow" />
         </Link>

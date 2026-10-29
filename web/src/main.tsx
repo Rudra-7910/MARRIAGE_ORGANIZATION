@@ -2,6 +2,7 @@ import "./styles/index.css";
 import "./styles/login.css";
 import "./styles/weddings.css";
 import "./styles/dashboard.css";
+import "./styles/invitations.css";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";

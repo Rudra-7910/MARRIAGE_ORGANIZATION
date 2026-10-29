@@ -1,0 +1,452 @@
+.invite-page {
+  color: #293e35;
+}
+.invite-page .dash-page-heading {
+  margin-bottom: 26px;
+}
+.invite-page .dash-page-heading h1 {
+  font-family: Newsreader, Georgia, serif;
+  font-size: clamp(30px, 3vw, 40px);
+  font-weight: 500;
+}
+.invite-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.invite-summary > div {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: #fffefa;
+  border: 1px solid #e2e7dc;
+  padding: 20px;
+  border-radius: 12px;
+}
+.invite-summary > div:nth-child(2) {
+  background: #f6f0e9;
+}
+.invite-summary > div:nth-child(3) {
+  background: #edf3eb;
+}
+.invite-summary span {
+  color: #637364;
+  font-size: 12px;
+}
+.invite-summary strong {
+  font-size: 30px;
+  font-weight: 500;
+}
+.invite-notice,
+.invite-success {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px 18px;
+  margin-bottom: 24px;
+  background: #fff6e6;
+  border: 1px solid #ecd7b2;
+  border-radius: 10px;
+  color: #77552c;
+  font-size: 12px;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+}
+.invite-notice > .icon,
+.invite-success > .icon {
+  width: 20px;
+  height: 20px;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+.invite-notice strong,
+.invite-success strong {
+  display: block;
+}
+.invite-success {
+  background: #edf5eb;
+  border-color: #cedfc9;
+  color: #285447;
+}
+.invite-directory {
+  overflow: hidden;
+}
+.invite-directory-tools {
+  padding: 18px 22px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  flex-wrap: wrap;
+  border-bottom: 1px solid #e6e9e0;
+}
+.invite-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f7f9f3;
+  border: 1px solid #e0e4d9;
+  padding: 0 12px;
+  border-radius: 8px;
+}
+.invite-search .icon {
+  width: 17px;
+}
+.invite-search input {
+  min-height: 44px;
+  background: transparent;
+  border: 0;
+  min-width: 0;
+  width: 200px;
+  font-size: 12px;
+  outline: none;
+}
+.invite-search:focus-within {
+  outline: 2px solid #285447;
+  outline-offset: 2px;
+}
+.invite-email {
+  display: block;
+  font-size: 12px;
+  color: #687569;
+  margin-top: 6px;
+  overflow-wrap: anywhere;
+}
+.invite-side,
+.invite-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.5;
+  padding: 5px 10px;
+  border-radius: 30px;
+  white-space: nowrap;
+}
+.invite-side.bride {
+  background: #edf3e8;
+  color: #3a5c3d;
+}
+.invite-side.groom {
+  background: #f8eae5;
+  color: #8b4b3c;
+}
+.invite-side.both {
+  background: #f2efe5;
+  color: #776340;
+}
+.invite-status.not_sent {
+  background: #f0f1eb;
+  color: #5b665a;
+}
+.invite-status.sending {
+  background: #eaf0f4;
+  color: #3d5e71;
+}
+.invite-status.submitted {
+  background: #e8f3e7;
+  color: #28543a;
+}
+.invite-status.failed {
+  background: #fbeae6;
+  color: #943d32;
+}
+.invite-status.unconfirmed {
+  background: #fff0d5;
+  color: #825920;
+}
+.invite-row-actions,
+.invite-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.invite-row-actions .ws-text-link {
+  min-height: 44px;
+}
+.invite-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 22px;
+  gap: 12px;
+  border-top: 1px solid #e6e9e0;
+  font-size: 12px;
+  color: #637364;
+}
+.invite-pagination > div {
+  display: flex;
+  gap: 8px;
+}
+.invite-caption {
+  color: #687568;
+  font-size: 11px;
+  line-height: 1.8;
+  margin-top: 14px;
+}
+.invite-caption a,
+.invite-details a {
+  color: #285447;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.invite-empty {
+  text-align: center;
+  padding: 52px 20px;
+  color: #6c7767;
+}
+.invite-empty .dash-empty-symbol {
+  margin: 0 auto 18px;
+}
+.invite-empty h2 {
+  font:
+    26px Newsreader,
+    Georgia,
+    serif;
+  color: #285447;
+  margin: 12px 0;
+}
+.invite-empty p {
+  max-width: 430px;
+  margin: 10px auto 20px;
+  font-size: 13px;
+  line-height: 1.8;
+}
+.invite-add-card {
+  padding: 24px;
+  margin-bottom: 22px;
+}
+.invite-card-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  gap: 12px;
+}
+.invite-card-title h2 {
+  font:
+    25px Newsreader,
+    Georgia,
+    serif;
+}
+.invite-guest-fields,
+.invite-email-fields {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+  display: grid;
+  gap: 18px;
+}
+.invite-guest-fields {
+  grid-template-columns: 1.2fr 1.2fr 0.7fr;
+}
+.invite-guest-fields small,
+.invite-email-fields small {
+  color: #9b463a;
+  font-weight: 400;
+}
+.invite-breadcrumb {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 12px;
+  color: #627563;
+  line-height: 1.8;
+  margin-bottom: 18px;
+  overflow-wrap: anywhere;
+}
+.invite-breadcrumb .icon {
+  width: 16px;
+  flex-shrink: 0;
+}
+.invite-breadcrumb > span {
+  color: #b0b6a8;
+}
+.invite-composer-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  gap: 26px;
+  align-items: start;
+}
+.invite-compose {
+  min-width: 0;
+}
+.invite-editor-card {
+  padding: 24px;
+}
+.invite-editor-card h2 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 22px;
+}
+.invite-editor-card h2 b {
+  background: #285447;
+  color: #fffdf8;
+  border-radius: 50%;
+  font-size: 10px;
+  width: 23px;
+  height: 23px;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  flex-shrink: 0;
+}
+.invite-details {
+  background: #f5f7ef;
+  border-radius: 9px;
+  padding: 6px 16px;
+}
+.invite-details > div {
+  display: grid;
+  grid-template-columns: 105px minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+  padding: 12px 0;
+  border-bottom: 1px solid #e5e9dd;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.invite-details > div:last-child {
+  border-bottom: 0;
+}
+.invite-details dt {
+  color: #6e7a68;
+}
+.invite-details dd {
+  margin: 0;
+  font-weight: 500;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+.invite-details small {
+  display: block;
+  color: #697564;
+  font-size: 11px;
+  font-weight: 400;
+  margin-top: 3px;
+}
+.invite-email-fields textarea {
+  resize: vertical;
+  min-height: 150px;
+  line-height: 1.8;
+}
+.invite-email-fields:disabled {
+  opacity: 0.8;
+}
+.invite-preview-panel {
+  position: sticky;
+  top: 98px;
+  min-width: 0;
+}
+.invite-preview-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 3px 13px;
+  font-size: 10px;
+  color: #53674e;
+  letter-spacing: 1px;
+  font-weight: 600;
+}
+.invite-preview-heading span {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.invite-preview-heading i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #285447;
+}
+.invite-preview-heading small {
+  font-size: 10px;
+  color: #7b8373;
+  letter-spacing: 0;
+  font-weight: 400;
+}
+.invite-preview-frame {
+  display: block;
+  width: 100%;
+  height: 840px;
+  border: 1px solid #e1e5da;
+  border-radius: 13px;
+  background: #fffdf8;
+  box-shadow: 0 10px 28px #23362708;
+}
+.invite-page button:disabled {
+  cursor: not-allowed;
+}
+@media (max-width: 1150px) {
+  .invite-composer-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .invite-preview-panel {
+    position: static;
+    max-width: 620px;
+    width: 100%;
+    margin: 8px auto 0;
+  }
+  .invite-guest-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 600px) {
+  .invite-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+  .invite-summary > div {
+    padding: 16px;
+  }
+  .invite-summary span {
+    font-size: 11px;
+  }
+  .invite-editor-card,
+  .invite-add-card {
+    padding: 20px 16px;
+  }
+  .invite-details {
+    padding: 6px 12px;
+  }
+  .invite-details > div {
+    grid-template-columns: 80px minmax(0, 1fr);
+    gap: 10px;
+  }
+  .invite-directory-tools {
+    padding: 14px;
+  }
+  .invite-directory-tools .dash-tabs {
+    flex-wrap: wrap;
+  }
+  .invite-search {
+    width: 100%;
+  }
+  .invite-search input {
+    width: 100%;
+  }
+  .invite-pagination {
+    padding: 14px;
+    flex-wrap: wrap;
+  }
+  .invite-actions {
+    align-items: stretch;
+  }
+  .invite-actions > .ws-button {
+    flex: 1;
+  }
+  .invite-notice {
+    padding: 14px;
+    flex-wrap: wrap;
+  }
+}

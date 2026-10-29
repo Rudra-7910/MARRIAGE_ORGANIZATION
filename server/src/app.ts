@@ -6,8 +6,10 @@ import { errorHandler } from "./middleware/error-handler.js";
 import { createAuthRouter } from "./modules/auth/auth.routes.js";
 import { createWeddingRouter } from "./modules/weddings/wedding.routes.js";
 import healthRouter from "./modules/health/health.routes.js";
+import { createInvitationRouter } from "./modules/invitations/invitation.routes.js";
+import type { EmailSender } from "./modules/invitations/invitation.email.js";
 
-export function createApp() {
+export function createApp(options: { sendEmail?: EmailSender } = {}) {
   const app = express();
 
 
@@ -52,6 +54,7 @@ export function createApp() {
   //jab bhi api/v1/health aaye , forward to , healthRouter
   app.use("/api/v1/health", healthRouter);
   app.use("/api/v1/auth", createAuthRouter());
+  app.use("/api/v1/weddings/current/guests", createInvitationRouter(options.sendEmail));
   app.use("/api/v1", createWeddingRouter());
 
   app.use((_req, res) => {

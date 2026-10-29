@@ -25,7 +25,7 @@ const navigation: {
     icon: "wallet",
     organizer: true,
   },
-  { path: "guests", label: "Guests & Invites", icon: "mail" },
+  { path: "guests", label: "Guests & Invites", icon: "mail", organizer: true },
   { path: "services", label: "Find Services", icon: "store" },
   { path: "photos", label: "Photos", icon: "camera" },
   { path: "guest-website", label: "Guest Website", icon: "globe" },
