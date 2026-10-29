@@ -5,9 +5,9 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Brand } from "../../components/ui/Brand";
 import { Icon } from "../../components/ui/Icon";
 import type { IconName } from "../../components/ui/Icon";
-import { logout } from "../../lib/api";
+import { logout, apiMessage } from "../../lib/api";
 import type { AuthUser } from "../../lib/api";
-import { apiMessage, weddingDate } from "../../lib/weddings";
+import { canOrganize, weddingDate } from "../../lib/weddings";
 import type { Workspace } from "../../lib/weddings";
 
 const navigation: {
@@ -44,7 +44,7 @@ export function DashboardLayout({
   const navigate = useNavigate();
   const cache = useQueryClient();
   const wedding = data.wedding!;
-  const organizer = data.role === "Organizer";
+  const organizer = canOrganize(data.role);
   const signOut = useMutation({
     mutationFn: logout,
     onSuccess: () => {

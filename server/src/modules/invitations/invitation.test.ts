@@ -296,6 +296,9 @@ test(
     await t.test(
       "the server preview uses real wedding fields, escapes input, and rejects injected email fields",
       async () => {
+        const initial = await request(owner, root + "/" + guestId + "/invitation");
+        assert.ok(initial.body.data.subject.startsWith("शुभ विवाह निमंत्रण:"));
+        assert.ok(initial.body.data.message.includes("सपरिवार पधारकर"));
         const result = await request(
           owner,
           root + "/" + guestId + "/preview",
@@ -307,6 +310,8 @@ test(
         assert.ok(html.includes("&lt;script&gt;"));
         assert.ok(!html.includes("<script>"));
         assert.ok(html.includes("Gupta &amp; Parivar"));
+        assert.ok(html.includes("॥ श्री गणेशाय नमः ॥"));
+        assert.ok(result.body.data.text.includes("शुभ विवाह · स्नेहिल आमंत्रण"));
         assert.ok(html.includes("14 March 2027 · 18:30 IST"));
         assert.ok(html.includes("26.9124%2C75.7873"));
         assert.ok(html.includes("/w/" + publicId));

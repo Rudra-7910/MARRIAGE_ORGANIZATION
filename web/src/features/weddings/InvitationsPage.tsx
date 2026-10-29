@@ -1,3 +1,4 @@
+import { apiMessage } from "../../lib/api";
 import { useEffect, useState } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -6,7 +7,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Icon } from "../../components/ui/Icon";
 import {
-  apiMessage,
   directions,
   needsSetup,
   signedOut,
@@ -50,8 +50,10 @@ export function GuestsPage({ userId }: { userId: string }) {
   const [form, setForm] = useState<GuestRecord | "new" | null>(null);
   const query = useQuery({
     queryKey: ["guests", userId, { side, search, page }],
-    queryFn: () => getGuests({ side, search, page }),
-    refetchInterval: 10000,
+    queryFn: ({ signal }) => getGuests({ side, search, page }, signal),
+    staleTime: 30000,
+    refetchInterval: 30000,
+    refetchIntervalInBackground: false,
   });
   if (signedOut(query.error)) return <Navigate to="/login" replace />;
   if (needsSetup(query.error)) return <Navigate to="/app/setup" replace />;

@@ -12,6 +12,8 @@ This document records the product scope. Account/family/wedding setup, the dashb
 
 ## 2. Goals and boundaries
 
+**Implemented team access amendment (29 October 2026):** People & Access now supports Admin, Organizer, Manager and Worker membership through manually shared single-use links. Creator is the protected Admin and alone grants/removes Admins/Organizers. Other Admins/Organizers manage Managers/Workers; Managers invite Workers and remove only their own invitees. Links expire after seven days and are bearer capabilities rather than email-bound invitations. Login/signup plus explicit acceptance is required; email verification and a new family/wedding are not. Role comes from MongoDB, never a recipient-supplied field. Atomic acceptance consumes the link and grants membership together. Existing membership is never silently replaced. Budget/guest navigation and API access are unavailable to Managers/Workers. Budget storage, department assignment and socket revocation remain planned. This amendment resolves the pending token-policy and creator-control questions elsewhere in this document.
+
 ### Goals
 
 - Give both families a shared view of wedding preparations.

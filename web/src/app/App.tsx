@@ -21,6 +21,11 @@ const GuestWeddingPage = lazy(() =>
     default: module.GuestWeddingPage,
   })),
 );
+const TeamInvitePage = lazy(() =>
+  import("../features/weddings/TeamInvitePage").then((module) => ({
+    default: module.TeamInvitePage,
+  })),
+);
 
 export function App() {
   const location = useLocation();
@@ -42,6 +47,7 @@ export function App() {
       members: "People & Access",
       "guest-website": "Guest Website",
       settings: "Wedding Settings",
+      "team-invites": "Join the wedding team",
     };
     const section = location.pathname.split("/").filter(Boolean).pop() || "";
     document.title = sectionTitles[section]
@@ -69,6 +75,7 @@ export function App() {
         <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
+        <Route path="/team-invites" element={<TeamInvitePage />} />
         <Route
           path="/demo/*"
           element={<Navigate to="/app/overview" replace />}

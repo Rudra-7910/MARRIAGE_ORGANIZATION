@@ -6,9 +6,25 @@ The tables A01–A59 retain **59 proposed REST endpoints** from the broader prod
 
 References: [PRD](./Make-My-Marriage-PRD.md) and [System Design](./Make-My-Marriage-System-Design2.md).
 
+## Implemented team access amendment
+
+These paths are relative to `/api/v1` and supersede the proposed A05–A10 routes below. All roles are wedding-scoped. Creator is protected Admin; only creator grants/removes Admins/Organizers. Other Admins/Organizers manage Managers/Workers; Managers invite Workers and remove only their own invited Workers.
+
+| Method | Path | Access/result |
+|---|---|---|
+| GET | `/weddings/current/team` | Member; safe member list, allowed invite roles and permitted invitation metadata. Other members’ emails appear only for Admins/Organizers. |
+| POST | `/weddings/current/team-invites` | Permitted inviter + CSRF; strict `{role}`; 201 with one-time-visible `url,id,role,expiresAt`. |
+| POST | `/team-invites/preview` | Public read-only `{token}`; couple names/date, role and expiry only. |
+| POST | `/team-invites/accept` | Session + CSRF; strict `{token}`; grants database-saved role. Existing membership is not replaced. |
+| DELETE | `/weddings/current/team-invites/:id` | Permitted inviter + CSRF; revoke unaccepted current-wedding link. |
+| DELETE | `/weddings/current/members/:userId` | Hierarchy + CSRF; remove member and revoke their outstanding invites. Creator/self-removal blocked. |
+| GET | `/weddings/current/budget` | Admin/Organizer only; availability metadata (`available:false`), no expense storage yet. Budget subpaths are also guarded. |
+
+Links are seven-day, single-use bearer capabilities, not email-bound. Browser path is `/team-invites#<token>`; login/signup continuation is router state. Generate 32 random bytes and persist only SHA-256 hash. Acceptance rechecks inviter authority and atomically consumes embedded invite + creates membership in one version-checked wedding update. The unique member-user index prevents joins to two weddings. Same-account retry returns the original role while membership remains; other accounts cannot replay the token. Removal and revocation are version-checked. Errors: 401 unauthenticated, 403 forbidden, 409 membership/concurrency conflict, 410 unavailable invite, 422 invalid fields. Team links send no automatic email. Managers/Workers have no budget or guest-management navigation/routes/API access. Socket invalidation and expense CRUD remain planned.
+
 ## Implemented manual email invitations — V1
 
-All paths are relative to `/api/v1/weddings/current/guests`. Every request requires an existing account session and **Organizer membership in the current wedding**, checked in MongoDB. All POST/PATCH requests additionally require a valid `X-CSRF-Token` from `/api/v1/auth/csrf` and an allowed Origin. Worker/Manager requests return 403; records from other weddings return 404. Clients cannot supply wedding ownership, roles, sender addresses or provider keys.
+All paths are relative to `/api/v1/weddings/current/guests`. Every request requires an existing account session and **Admin or Organizer membership in the current wedding**, checked in MongoDB. All POST/PATCH requests additionally require a valid `X-CSRF-Token` from `/api/v1/auth/csrf` and an allowed Origin. Worker/Manager requests return 403; records from other weddings return 404. Clients cannot supply wedding ownership, roles, sender addresses or provider keys.
 
 | Method | Path | Input / output |
 |---|---|---|

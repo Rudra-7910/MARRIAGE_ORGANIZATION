@@ -11,7 +11,7 @@
   --color-muted: #5f665e;
   --color-line: #e7e1d9;
   --color-sage: #edf1e9;
-  --font-sans: "Manrope", sans-serif;
+  --font-sans: "Manrope", "Noto Sans Devanagari", sans-serif;
   --font-editorial: "Newsreader", Georgia, serif;
 }
 

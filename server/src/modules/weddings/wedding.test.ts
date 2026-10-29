@@ -177,7 +177,7 @@ test(
       async () => {
         const result = await request(owner, "/weddings", "POST", input);
         assert.equal(result.status, 201);
-        assert.equal(result.body.data.role, "Organizer");
+        assert.equal(result.body.data.role, "Admin");
         assert.equal(result.body.data.wedding.brideName, input.brideName);
         publicId = result.body.data.wedding.publicId;
         version = result.body.data.wedding.version;

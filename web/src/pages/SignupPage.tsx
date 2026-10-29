@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { inviteTokenFromState } from "../lib/team";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -7,7 +8,7 @@ import { z } from "zod";
 import { signup } from "../lib/api";
 import { Brand } from "../components/ui/Brand";
 import { Icon } from "../components/ui/Icon";
-import { LoginStory } from "../features/auth/components/LoginStory";
+import { LoginStory } from "../features/auth/LoginStory";
 
 const signupSchema = z
   .object({
@@ -32,9 +33,42 @@ const signupSchema = z
   });
 type SignupValues = z.infer<typeof signupSchema>;
 
+const signupFields = [
+  {
+    name: "name",
+    label: "Your name",
+    type: "text",
+    autoComplete: "name",
+    icon: "people",
+  },
+  {
+    name: "email",
+    label: "Email address",
+    type: "email",
+    autoComplete: "username",
+    icon: "mail",
+  },
+  {
+    name: "password",
+    label: "Password",
+    type: "password",
+    autoComplete: "new-password",
+    icon: "lock",
+  },
+  {
+    name: "confirmPassword",
+    label: "Confirm password",
+    type: "password",
+    autoComplete: "new-password",
+    icon: "lock",
+  },
+] as const;
+
 export function SignupPage() {
   const [visible, setVisible] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+  const teamInviteToken = inviteTokenFromState(location.state);
   const queryClient = useQueryClient();
   const {
     register,
@@ -46,7 +80,10 @@ export function SignupPage() {
     onSuccess: (user) => {
       queryClient.clear();
       queryClient.setQueryData(["auth-user"], user);
-      navigate("/app/setup", { replace: true });
+      navigate(
+        teamInviteToken ? "/team-invites#" + teamInviteToken : "/app/setup",
+        { replace: true },
+      );
     },
   });
   return (
@@ -83,85 +120,57 @@ export function SignupPage() {
               )}
               onChange={() => mutation.reset()}
             >
-              {(["name", "email", "password", "confirmPassword"] as const).map(
-                (field) => (
-                  <div className="login-field" key={field}>
-                    <label htmlFor={"signup-" + field}>
-                      {
-                        {
-                          name: "Your name",
-                          email: "Email address",
-                          password: "Password",
-                          confirmPassword: "Confirm password",
-                        }[field]
+              {signupFields.map((field) => (
+                <div className="login-field" key={field.name}>
+                  <label htmlFor={"signup-" + field.name}>{field.label}</label>
+                  <div
+                    className={
+                      "login-input-wrap " +
+                      (errors[field.name] ? "has-error" : "")
+                    }
+                  >
+                    <Icon name={field.icon} />
+                    <input
+                      id={"signup-" + field.name}
+                      type={
+                        field.type === "password" && visible
+                          ? "text"
+                          : field.type
                       }
-                    </label>
-                    <div
-                      className={
-                        "login-input-wrap " + (errors[field] ? "has-error" : "")
+                      autoComplete={field.autoComplete}
+                      required
+                      aria-invalid={!!errors[field.name]}
+                      aria-describedby={
+                        errors[field.name]
+                          ? "signup-" + field.name + "-error"
+                          : undefined
                       }
-                    >
-                      <Icon
-                        name={
-                          field === "name"
-                            ? "people"
-                            : field === "email"
-                              ? "mail"
-                              : "lock"
+                      {...register(field.name)}
+                    />
+                    {field.name === "password" && (
+                      <button
+                        type="button"
+                        className="password-toggle"
+                        onClick={() => setVisible(!visible)}
+                        aria-label={
+                          visible ? "Hide passwords" : "Show passwords"
                         }
-                      />
-                      <input
-                        id={"signup-" + field}
-                        type={
-                          field === "password" || field === "confirmPassword"
-                            ? visible
-                              ? "text"
-                              : "password"
-                            : field === "email"
-                              ? "email"
-                              : "text"
-                        }
-                        autoComplete={
-                          field === "name"
-                            ? "name"
-                            : field === "email"
-                              ? "username"
-                              : "new-password"
-                        }
-                        required
-                        aria-invalid={!!errors[field]}
-                        aria-describedby={
-                          errors[field]
-                            ? "signup-" + field + "-error"
-                            : undefined
-                        }
-                        {...register(field)}
-                      />
-                      {field === "password" && (
-                        <button
-                          type="button"
-                          className="password-toggle"
-                          onClick={() => setVisible(!visible)}
-                          aria-label={
-                            visible ? "Hide passwords" : "Show passwords"
-                          }
-                        >
-                          <Icon name={visible ? "eye-off" : "eye"} />
-                        </button>
-                      )}
-                    </div>
-                    {errors[field] && (
-                      <p
-                        id={"signup-" + field + "-error"}
-                        role="alert"
-                        className="login-field-error"
                       >
-                        {errors[field]?.message}
-                      </p>
+                        <Icon name={visible ? "eye-off" : "eye"} />
+                      </button>
                     )}
                   </div>
-                ),
-              )}
+                  {errors[field.name] && (
+                    <p
+                      id={"signup-" + field.name + "-error"}
+                      role="alert"
+                      className="login-field-error"
+                    >
+                      {errors[field.name]?.message}
+                    </p>
+                  )}
+                </div>
+              ))}
               <button
                 className="button button-primary login-submit"
                 disabled={mutation.isPending}
@@ -175,13 +184,17 @@ export function SignupPage() {
                 </p>
               )}
               <p className="login-session-note">
-                No email verification needed for v1. Next, register your family
-                and create your wedding.
+                {teamInviteToken
+                  ? "No email verification needed. Next, review and accept your wedding team invitation."
+                  : "No email verification needed for v1. Next, register your family and create your wedding."}
               </p>
             </form>
             <div className="login-create-account">
               <span>Already have an account?</span>
-              <Link to="/login">
+              <Link
+                to="/login"
+                state={teamInviteToken ? { teamInviteToken } : undefined}
+              >
                 Log in
                 <Icon name="arrow" />
               </Link>

@@ -2,8 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Icon } from "../../components/ui/Icon";
 import type { IconName } from "../../components/ui/Icon";
-import type { AuthUser } from "../../lib/api";
-import { directions, weddingDate } from "../../lib/weddings";
+import { canOrganize, directions, weddingDate } from "../../lib/weddings";
 import type { Workspace } from "../../lib/weddings";
 
 function PageHeading({
@@ -99,7 +98,7 @@ export function FunctionsPage({ data }: { data: Workspace }) {
           >
             Get directions ↗
           </a>
-          {data.role === "Organizer" && (
+          {canOrganize(data.role) && (
             <Link className="ws-text-link" to="/app/wedding/edit">
               Edit details <Icon name="arrow" />
             </Link>
@@ -299,81 +298,6 @@ export function PhotosPage() {
   );
 }
 
-export function PeoplePage({
-  user,
-  data,
-}: {
-  user: AuthUser;
-  data: Workspace;
-}) {
-  return (
-    <>
-      <PageHeading
-        title="People & Access"
-        description="A shared celebration, with the right access for everyone."
-      />
-      <section className="dash-card">
-        <div className="dash-card-heading">
-          <h2>Your access</h2>
-          <span className="dash-badge">
-            <Icon name="lock" />
-            Server verified
-          </span>
-        </div>
-        <div className="dash-person">
-          <span className="dash-avatar">
-            {user.name.slice(0, 1).toUpperCase()}
-          </span>
-          <div>
-            <strong>
-              {user.name} <small>(you)</small>
-            </strong>
-            <p>{user.email}</p>
-          </div>
-          <span className="dash-badge">{data.role}</span>
-        </div>
-      </section>
-      <div className="dash-access-grid">
-        {[
-          {
-            name: "Organizer",
-            icon: "settings",
-            text: "Edit wedding details and manage the shared wedding space. Budget information stays with organizers.",
-          },
-          {
-            name: "Manager",
-            icon: "people",
-            text: "Coordinate their department and see progress across other departments.",
-          },
-          {
-            name: "Worker",
-            icon: "check",
-            text: "Follow assigned work and view department progress without access to private spending.",
-          },
-        ].map((role) => (
-          <section className="dash-card" key={role.name}>
-            <Icon name={role.icon as IconName} />
-            <h2>{role.name}</h2>
-            <p>{role.text}</p>
-          </section>
-        ))}
-      </div>
-      <div className="dash-bottom-note">
-        <Icon name="people" />
-        <p>
-          Inviting more family members and changing team access will be
-          connected in a later step. Your current wedding role is already
-          checked by the server.
-        </p>
-        <button className="ws-button" disabled>
-          <Icon name="plus" />
-          Invite member · coming soon
-        </button>
-      </div>
-    </>
-  );
-}
-
 export function GuestWebsitePage({ data }: { data: Workspace }) {
   const [copyStatus, setCopyStatus] = useState("");
   const wedding = data.wedding!;
@@ -435,7 +359,7 @@ export function GuestWebsitePage({ data }: { data: Workspace }) {
           <section className="dash-card">
             <div className="dash-card-heading">
               <h2>What your guests will see</h2>
-              {data.role === "Organizer" && (
+              {canOrganize(data.role) && (
                 <Link className="dash-inline-link" to="/app/wedding/edit">
                   Edit details <Icon name="arrow" />
                 </Link>

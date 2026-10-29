@@ -1,5 +1,5 @@
 import axios from "axios";
-import { api } from "./api";
+import { api, getCsrfHeaders } from "./api";
 
 export type WeddingInput = {
   brideName: string;
@@ -22,61 +22,54 @@ export type WeddingRecord = WeddingDetails & {
   version: number;
   updatedAt: string;
 };
+export type WeddingRole = "Admin" | "Organizer" | "Manager" | "Worker";
 export type Workspace = {
   family: { id: string; name: string; side: "Bride" | "Groom" | "Both" } | null;
   wedding: WeddingRecord | null;
-  role: "Organizer" | "Manager" | "Worker" | null;
+  role: WeddingRole | null;
 };
 
-export async function getSetup() {
-  return (await api.get<{ data: Workspace }>("/setup")).data.data;
-}
-export async function getDashboard() {
-  return (await api.get<{ data: Workspace }>("/dashboard")).data.data;
-}
-export async function getGuestWedding(publicId: string) {
-  return (
-    await api.get<{ data: WeddingDetails }>(
-      "/public/weddings/" + encodeURIComponent(publicId),
-    )
-  ).data.data;
+export function canOrganize(role: WeddingRole | null) {
+  return role === "Admin" || role === "Organizer";
 }
 
-async function csrfHeaders() {
-  const response = await api.get<{ data: { token: string } }>("/auth/csrf");
-  return { "X-CSRF-Token": response.data.data.token };
+export async function getSetup() {
+  const response = await api.get<{ data: Workspace }>("/setup");
+  return response.data.data;
+}
+export async function getDashboard(signal?: AbortSignal) {
+  const response = await api.get<{ data: Workspace }>("/dashboard", { signal });
+  return response.data.data;
+}
+export async function getGuestWedding(publicId: string, signal?: AbortSignal) {
+  const response = await api.get<{ data: WeddingDetails }>(
+    "/public/weddings/" + encodeURIComponent(publicId),
+    { signal },
+  );
+  return response.data.data;
 }
 export async function createFamily(values: {
   name: string;
   side: "Bride" | "Groom" | "Both";
 }) {
-  return (
-    await api.post<{ data: Workspace }>("/families", values, {
-      headers: await csrfHeaders(),
-    })
-  ).data.data;
+  const response = await api.post<{ data: Workspace }>("/families", values, {
+    headers: await getCsrfHeaders(),
+  });
+  return response.data.data;
 }
 export async function createWedding(values: WeddingInput) {
-  return (
-    await api.post<{ data: Workspace }>("/weddings", values, {
-      headers: await csrfHeaders(),
-    })
-  ).data.data;
+  const response = await api.post<{ data: Workspace }>("/weddings", values, {
+    headers: await getCsrfHeaders(),
+  });
+  return response.data.data;
 }
 export async function editWedding(values: WeddingInput, version: number) {
-  return (
-    await api.patch<{ data: Workspace }>(
-      "/weddings/current",
-      { ...values, version },
-      { headers: await csrfHeaders() },
-    )
-  ).data.data;
-}
-export function apiMessage(error: unknown) {
-  return axios.isAxiosError(error)
-    ? error.response?.data?.error?.message ||
-        "Could not reach the server. Please try again."
-    : "Something went wrong. Please try again.";
+  const response = await api.patch<{ data: Workspace }>(
+    "/weddings/current",
+    { ...values, version },
+    { headers: await getCsrfHeaders() },
+  );
+  return response.data.data;
 }
 export function needsSetup(error: unknown) {
   return (
@@ -88,12 +81,41 @@ export function signedOut(error: unknown) {
   return axios.isAxiosError(error) && error.response?.status === 401;
 }
 export function weddingDate(value: string) {
-  return new Date(value + "T12:00:00").toLocaleDateString("en-IN", {
+  return new Date(value + "T12:00:00+05:30").toLocaleDateString("en-IN", {
     day: "numeric",
     month: "long",
     year: "numeric",
+    timeZone: "Asia/Kolkata",
   });
 }
+
+export function weddingTime(value: string) {
+  const [hours, minutes] = value.split(":").map(Number);
+  return (
+    (hours % 12 || 12) +
+    ":" +
+    String(minutes).padStart(2, "0") +
+    (hours >= 12 ? " PM" : " AM")
+  );
+}
+
+// The wedding form stores Indian local time. Parse it explicitly as IST,
+// so a guest opening the website abroad sees the same ceremony and countdown.
+export function weddingCountdown(date: string, time: string, now = Date.now()) {
+  const target = Date.parse(date + "T" + time + ":00+05:30");
+  if (!Number.isFinite(target)) return null;
+  const total = Math.max(0, Math.ceil((target - now) / 1000));
+  return {
+    days: Math.floor(total / 86400),
+    hours: Math.floor((total % 86400) / 3600),
+    minutes: Math.floor((total % 3600) / 60),
+    seconds: total % 60,
+    started: target <= now,
+  };
+}
+
+export const weddingBlessing =
+  "ईश्वर की कृपा और अपने बड़ों के आशीर्वाद से, हम अपने जीवन की नई शुरुआत करने जा रहे हैं। इस शुभ विवाह में सपरिवार पधारकर हमें अपने स्नेह और आशीर्वाद से अनुगृहीत करें। आपकी उपस्थिति ही हमारे लिए सबसे सुंदर उपहार है।";
 export function directions(wedding: WeddingInput) {
   const destination =
     wedding.latitude !== null && wedding.longitude !== null

@@ -8,11 +8,13 @@ Status: Architecture review draft. Confirmed choices are distinguished from prop
 
 ### Current V1 invitation process and stack
 
+**Team access implementation amendment:** Wedding embeds both `members` and bounded `teamInvites` arrays. Invitations store hashed random tokens, role, inviter, expiry, revocation and acceptance data. One version-checked `findOneAndUpdate` consumes the invite and pushes membership atomically; the unique `members.userId` index prevents concurrent joins to different weddings. No queue or cross-collection transaction is needed for this flow. Creator is a protected Admin; only creator manages Admin/Organizer membership. Other Admins/Organizers manage Managers/Workers; Managers manage their own invited Workers. Authority is re-read from MongoDB for each private request. The token is in the browser fragment and preview/accept JSON bodies. Invitees return from login/signup and accept without email verification or another wedding setup. Managers/Workers cannot access Budget. Expense persistence, department scoping and socket access-change broadcasts remain planned. The API-design amendment documents actual routes and supersedes provisional P07–P09 transaction/path proposals below.
+
 ```mermaid
 flowchart LR
   G[Organizer: saved guest / family] --> C[React composer + RHF / Zod]
   C --> P[Axios + session cookie + CSRF]
-  P --> A[Express: current wedding Organizer check]
+  P --> A[Express: current wedding Admin / Organizer check]
   A --> V[Shared server HTML preview]
   A --> M[(Mongoose: Guest + frozen invitation)]
   M --> S[Atomic version claim / 60-second lease]

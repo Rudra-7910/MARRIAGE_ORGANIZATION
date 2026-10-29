@@ -1,289 +1,412 @@
+import { apiMessage } from "../../lib/api";
 import { Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { Icon } from "../../components/ui/Icon";
-import { directions, weddingDate } from "../../lib/weddings";
+import {
+  canOrganize,
+  directions,
+  weddingDate,
+  weddingTime,
+} from "../../lib/weddings";
 import type { Workspace } from "../../lib/weddings";
+import { getGuests, invitationLabels } from "../../lib/invitations";
 import { NearbyServices } from "./ServicesPage";
+import { WeddingCountdown } from "./WeddingCountdown";
 
-export function WeddingOverview({ data }: { data: Workspace }) {
+export function WeddingOverview({
+  data,
+  userId,
+}: {
+  data: Workspace;
+  userId: string;
+}) {
   const wedding = data.wedding!;
+  const organizer = canOrganize(data.role);
+  const params = { page: 1, search: "", side: "All" };
+  const invitations = useQuery({
+    queryKey: ["guests", userId, params],
+    queryFn: ({ signal }) => getGuests(params, signal),
+    enabled: organizer,
+    staleTime: 30000,
+    refetchInterval: 30000,
+    refetchIntervalInBackground: false,
+  });
   return (
-    <>
-      <div className="dash-page-heading">
+    <div className="celebration-overview">
+      <div className="celebration-overview-heading">
         <div>
-          <span className="dash-kicker">
-            <span className="dash-status-dot" />
-            {data.family?.name} · YOUR SHARED PLAN
+          <span className="celebration-kicker">
+            {data.family?.name} · YOUR SHARED WEDDING SPACE
           </span>
-          <h1>Your wedding, at a glance</h1>
-          <p>
-            A little less following up. More time for the moments that matter.
-          </p>
+          <h1>Your celebration, in motion.</h1>
+          <p>A little less following up. A little more together.</p>
         </div>
-        {data.role === "Organizer" && (
-          <Link className="ws-button ws-primary" to="/app/wedding/edit">
-            <Icon name="settings" />
-            Edit wedding
-          </Link>
-        )}
+        <span className="celebration-private">
+          <Icon name="lock" />
+          Private workspace
+        </span>
       </div>
-
-      <div className="dash-stats-strip">
-        <Link to="/app/functions">
-          <span className="dash-stat-icon">
-            <Icon name="calendar" />
-          </span>
-          <div>
-            <small>THE BIG DAY</small>
-            <strong>{weddingDate(wedding.date)}</strong>
-            <span>
-              {wedding.startTime} IST · {wedding.city}
-            </span>
-          </div>
-          <Icon name="arrow" />
-        </Link>
-        <Link to="/app/guests">
-          <span className="dash-stat-icon blush">
-            <Icon name="mail" />
-          </span>
-          <div>
-            <small>GUEST EMAIL INVITES</small>
-            <strong>Your people, together</strong>
-            <span>Save families & send personal invitations</span>
-          </div>
-          <Icon name="arrow" />
-        </Link>
-        <Link to="/app/photos">
-          <span className="dash-stat-icon sand">
-            <Icon name="camera" />
-          </span>
-          <div>
-            <small>WEDDING MEMORIES</small>
-            <strong>A place for every moment</strong>
-            <span>Photo collection coming soon</span>
-          </div>
-          <Icon name="arrow" />
-        </Link>
-      </div>
-
-      <div className="dash-overview-grid">
-        <section className="dash-card dash-attention">
-          <div className="dash-card-heading">
-            <h2>
-              <Icon name="flag" />
-              Needs Your Attention
-            </h2>
-            <span className="dash-badge sand">Follow-ups</span>
-          </div>
-          <div className="dash-attention-empty">
-            <span className="dash-empty-symbol">
-              <Icon name="flag" />
-            </span>
-            <h3>Every follow-up, in one place.</h3>
-            <p>
-              Department requests and overdue updates will appear here when
-              service tracking is connected.
-            </p>
-            <Link to="/app/departments" className="ws-button">
-              Explore Teams & Services <Icon name="arrow" />
-            </Link>
-          </div>
-          <div className="dash-card-footnote">
-            <Icon name="phone" />
-            <span>
-              For now, keep your wedding contact up to date so everyone knows
-              whom to call.
-            </span>
-          </div>
-        </section>
-
-        <section className="dash-card dash-ceremony">
-          <div className="dash-ceremony-cover">
-            <span className="dash-badge">YOUR CELEBRATION</span>
+      {organizer &&
+        invitations.data &&
+        invitations.data.summary.attention > 0 && (
+          <section
+            className="celebration-attention"
+            aria-label="Needs your attention"
+          >
+            <Icon name="flag" />
             <div>
-              <small>THE WEDDING OF</small>
-              <h2>
-                {wedding.brideName} <em>&</em> {wedding.groomName}
-              </h2>
+              <strong>Needs your attention</strong>
+              <p>
+                {invitations.data.summary.attention} invitation
+                {invitations.data.summary.attention === 1 ? "" : "s"} need
+                review. Check the saved result before retrying.
+              </p>
             </div>
-            <span className="dash-ceremony-flower" aria-hidden="true">
-              ✳
-            </span>
-          </div>
-          <div className="dash-ceremony-details">
-            <p>
-              <Icon name="calendar" />
-              <span>
-                <strong>{weddingDate(wedding.date)}</strong>
-                {wedding.startTime}
-                {wedding.endTime ? " – " + wedding.endTime : ""} IST
-              </span>
-            </p>
-            <p>
-              <Icon name="pin" />
-              <span>
-                <strong>{wedding.venue}</strong>
-                {wedding.address}, {wedding.city}
-              </span>
-            </p>
-            <p>
-              <Icon name="people" />
-              <span>
-                <strong>{wedding.contactRole}</strong>
-                <a href={"tel:" + wedding.phone}>{wedding.phone}</a>
-              </span>
-            </p>
-            <div className="dash-ceremony-actions">
-              <Link className="ws-button" to="/app/functions">
-                View ceremony
-              </Link>
-              <a
-                className="ws-button ws-primary"
-                href={directions(wedding)}
-                target="_blank"
-                rel="noreferrer"
-              >
-                <Icon name="pin" />
-                Google Maps ↗
-              </a>
-            </div>
-          </div>
-        </section>
-      </div>
-
-      <section className="dash-card">
-        <div className="dash-card-heading">
-          <div>
-            <h2>Teams & Services</h2>
-            <p>
-              One shared view of your departments, family helpers and vendors.
-            </p>
-          </div>
-          <Link className="dash-inline-link" to="/app/departments">
-            View all <Icon name="arrow" />
-          </Link>
-        </div>
-        <div className="dash-table-wrap">
-          <table className="dash-table">
-            <thead>
-              <tr>
-                <th>Department</th>
-                <th>Work status</th>
-                <th>Last update</th>
-                <th>Next deadline</th>
-                <th>Contact</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td colSpan={5}>
-                  <div className="dash-table-empty">
-                    <Icon name="people" />
-                    <strong>Your team’s updates belong here.</strong>
-                    <p>
-                      Service tracking is coming soon. You can explore nearby
-                      wedding services below.
-                    </p>
-                    <Link className="dash-inline-link" to="/app/services">
-                      Find services near {wedding.city} <Icon name="arrow" />
-                    </Link>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <div className="dash-overview-grid">
-        {data.role === "Organizer" && (
-          <section className="dash-card">
-            <div className="dash-card-heading">
-              <h2>
-                <Icon name="wallet" />
-                Spending Summary
-              </h2>
-              <span className="dash-badge">
-                <Icon name="lock" />
-                Organizers only
-              </span>
-            </div>
-            <div className="dash-money-grid">
-              {["Budget", "Agreed cost", "Paid", "Pending dues"].map(
-                (label) => (
-                  <div key={label}>
-                    <span>{label}</span>
-                    <strong>—</strong>
-                  <small>Available soon</small>
-                  </div>
-                ),
-              )}
-            </div>
-            <div className="dash-card-bottom">
-              <p>Your family’s spending stays private.</p>
-              <Link className="dash-inline-link" to="/app/budget">
-                Budget & Expenses <Icon name="arrow" />
-              </Link>
-            </div>
+            <Link to="/app/guests" className="ws-button">
+              Review invitations <Icon name="arrow" />
+            </Link>
           </section>
         )}
-        <section className="dash-card">
-          <div className="dash-card-heading">
-            <h2>
+      <section className="celebration-organizer-hero">
+        <div className="celebration-organizer-art" aria-hidden="true">
+          <span>॥ शुभ विवाह ॥</span>
+          <strong>
+            {wedding.brideName.slice(0, 1)}
+            <em>&</em>
+            {wedding.groomName.slice(0, 1)}
+          </strong>
+          <p>A beautiful beginning.</p>
+        </div>
+        <div className="celebration-organizer-identity">
+          <span className="celebration-kicker">
+            YOUR PEOPLE. YOUR PLANS. YOUR BIG DAY.
+          </span>
+          <h2>
+            {wedding.brideName} <em>&</em> {wedding.groomName}
+          </h2>
+          <div className="celebration-organizer-date">
+            <span className="celebration-kicker">THE WEDDING DAY</span>
+            <time dateTime={wedding.date}>{weddingDate(wedding.date)}</time>
+            <p>
               <Icon name="clock" />
-              Recent Updates
-            </h2>
-            <span className="dash-badge">Latest save</span>
-          </div>
-          <div className="dash-update-entry">
-            <span className="dash-update-icon">
-              <Icon name="check" />
-            </span>
-            <div>
-              <strong>
-                {wedding.brideName} & {wedding.groomName}
-              </strong>
-              <p>
-                Current wedding details are shared with your dashboard and guest
-                website.
-              </p>
-              <time dateTime={wedding.updatedAt}>
-                Last saved{" "}
-                {new Date(wedding.updatedAt).toLocaleString("en-IN", {
-                  dateStyle: "medium",
-                  timeStyle: "short",
-                  timeZone: "Asia/Kolkata",
-                })}{" "}
-                IST
+              <time
+                dateTime={wedding.date + "T" + wedding.startTime + ":00+05:30"}
+              >
+                {weddingTime(wedding.startTime)} IST
               </time>
-            </div>
+              <span>Wedding ceremony / shubh muhurat</span>
+            </p>
           </div>
-          <div className="dash-card-bottom">
-            <span>Same details. Everyone in the loop.</span>
-            <Link className="dash-inline-link" to="/app/guest-website">
-              Guest website <Icon name="arrow" />
-            </Link>
-          </div>
-        </section>
-      </div>
-
-      <NearbyServices wedding={wedding} />
-
-      <section className="dash-share-banner">
-        <span className="dash-share-icon">
-          <Icon name="globe" />
-        </span>
-        <div>
-          <small>FOR THE PEOPLE WHO MAKE IT YOURS</small>
-          <h2>Your guest website is ready.</h2>
-          <p>
-            Dates, directions and a warm welcome. Your guests don’t need an
-            account.
+          <p className="celebration-organizer-place">
+            <Icon name="pin" />
+            <span>
+              <strong>{wedding.venue}</strong>
+              {wedding.city}
+            </span>
           </p>
         </div>
-        <Link className="ws-button ws-primary" to="/app/guest-website">
-          Open guest website settings <Icon name="arrow" />
-        </Link>
+        <WeddingCountdown
+          date={wedding.date}
+          time={wedding.startTime}
+          detailsHref="#wedding-details"
+        />
+        <div className="celebration-actions">
+          {organizer && (
+            <>
+              <Link className="ws-button ws-primary" to="/app/guests">
+                <Icon name="mail" />
+                Prepare invitation
+              </Link>
+              <Link className="ws-button" to="/app/wedding/edit">
+                <Icon name="settings" />
+                Edit wedding
+              </Link>
+            </>
+          )}
+          <Link
+            className="ws-button"
+            to={"/w/" + wedding.publicId}
+            target="_blank"
+          >
+            <Icon name="eye" />
+            Preview guest website
+          </Link>
+        </div>
       </section>
-    </>
+      <div className="celebration-overview-grid">
+        <section className="celebration-overview-next">
+          <div className="celebration-card-heading">
+            <h2>Your next steps</h2>
+            <span>ONE THING AT A TIME</span>
+          </div>
+          {organizer && (
+            <Link className="celebration-next-step" to="/app/guests">
+              <span>
+                <Icon name="people" />
+              </span>
+              <div>
+                <h3>Add a guest / family</h3>
+                <p>
+                  Bring your favourite people together. A name, an email, a
+                  little love.
+                </p>
+                <strong>
+                  Open guest directory <Icon name="arrow" />
+                </strong>
+              </div>
+            </Link>
+          )}
+          <Link
+            className="celebration-next-step"
+            to={"/w/" + wedding.publicId}
+            target="_blank"
+          >
+            <span>
+              <Icon name="globe" />
+            </span>
+            <div>
+              <h3>Review your guest website</h3>
+              <p>
+                Check your welcome note, date, directions and the family
+                contact.
+              </p>
+              <strong>
+                See their experience <Icon name="arrow" />
+              </strong>
+            </div>
+          </Link>
+        </section>
+        <section className="celebration-detail-card" id="wedding-details">
+          <div className="celebration-card-heading">
+            <h2>Ceremony & venue</h2>
+            <Icon name="calendar" />
+          </div>
+          <dl className="celebration-overview-details">
+            <div>
+              <dt>THE DAY & SHUBH MUHURAT</dt>
+              <dd>
+                <time dateTime={wedding.date}>{weddingDate(wedding.date)}</time>
+                <small>
+                  {weddingTime(wedding.startTime)}
+                  {wedding.endTime
+                    ? " – " + weddingTime(wedding.endTime)
+                    : ""}{" "}
+                  IST
+                </small>
+              </dd>
+            </div>
+            <div>
+              <dt>THE PLACE</dt>
+              <dd>
+                {wedding.venue}
+                <small>
+                  {wedding.address}, {wedding.city}
+                </small>
+              </dd>
+            </div>
+            <div>
+              <dt>FAMILY CONTACT</dt>
+              <dd>
+                {wedding.contactRole}
+                <a href={"tel:" + wedding.phone.replace(/[^+\d]/g, "")}>
+                  {wedding.phone}
+                </a>
+              </dd>
+            </div>
+            <div>
+              <dt>DIRECTIONS</dt>
+              <dd>
+                <a
+                  className="ws-button"
+                  href={directions(wedding)}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <Icon name="pin" />
+                  Open in Google Maps
+                </a>
+              </dd>
+            </div>
+          </dl>
+        </section>
+      </div>
+      {organizer && (
+        <section className="celebration-invitation-summary">
+          <div className="celebration-card-heading">
+            <div>
+              <span className="celebration-kicker">
+                A PERSONAL WELCOME FOR YOUR PEOPLE
+              </span>
+              <h2>Guests & invitations</h2>
+            </div>
+            <Link className="ws-text-link" to="/app/guests">
+              View all families <Icon name="arrow" />
+            </Link>
+          </div>
+          {invitations.isPending ? (
+            <p className="celebration-empty" role="status">
+              Loading your saved invitations…
+            </p>
+          ) : invitations.isError ? (
+            <div className="celebration-empty" role="alert">
+              <p>{apiMessage(invitations.error)}</p>
+              <button
+                className="ws-button"
+                onClick={() => invitations.refetch()}
+              >
+                Try again
+              </button>
+            </div>
+          ) : (
+            invitations.data && (
+              <>
+                <div className="celebration-invitation-metrics">
+                  {[
+                    {
+                      label: "Family entries",
+                      value: invitations.data.summary.total,
+                      note: "Your saved guest list",
+                    },
+                    {
+                      label: "Submitted",
+                      value: invitations.data.summary.submitted,
+                      note: "Accepted by email provider",
+                    },
+                    {
+                      label: "Not sent",
+                      value: invitations.data.summary.notSent,
+                      note: "Ready for a personal invitation",
+                    },
+                    {
+                      label: "Need attention",
+                      value: invitations.data.summary.attention,
+                      note: "Failed or unconfirmed attempts",
+                    },
+                  ].map((metric) => (
+                    <div key={metric.label}>
+                      <span>{metric.label}</span>
+                      <strong>{metric.value}</strong>
+                      <small>{metric.note}</small>
+                    </div>
+                  ))}
+                </div>
+                {invitations.data.guests.length ? (
+                  <div className="dash-table-wrap">
+                    <table className="dash-table">
+                      <thead>
+                        <tr>
+                          <th>Guest / family</th>
+                          <th>Side</th>
+                          <th>Email status</th>
+                          <th>
+                            <span className="sr-only">View invitation</span>
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {invitations.data.guests.slice(0, 5).map((guest) => (
+                          <tr key={guest.id}>
+                            <td>
+                              <strong>{guest.name}</strong>
+                              <small className="invite-email">
+                                {guest.email}
+                              </small>
+                            </td>
+                            <td>
+                              <span
+                                className={
+                                  "invite-side " + guest.side.toLowerCase()
+                                }
+                              >
+                                {guest.side === "Both"
+                                  ? "Both sides"
+                                  : guest.side + "’s side"}
+                              </span>
+                            </td>
+                            <td>
+                              <span className={"invite-status " + guest.status}>
+                                {invitationLabels[guest.status]}
+                              </span>
+                            </td>
+                            <td>
+                              <Link
+                                className="ws-button"
+                                to={"/app/guests/" + guest.id + "/invitation"}
+                                aria-label={"View invitation for " + guest.name}
+                              >
+                                <Icon name="eye" />
+                                View
+                              </Link>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="celebration-empty">
+                    <Icon name="mail" />
+                    <h3>Your people belong here.</h3>
+                    <p>
+                      Add your first family and send an invitation with your own
+                      words.
+                    </p>
+                    <Link className="ws-button ws-primary" to="/app/guests">
+                      Add your first guest <Icon name="plus" />
+                    </Link>
+                  </div>
+                )}
+                <p className="celebration-caption">
+                  Submitted means accepted by the email provider. Inbox delivery
+                  is not tracked.
+                </p>
+              </>
+            )
+          )}
+        </section>
+      )}
+      <NearbyServices wedding={wedding} />
+      <section className="celebration-planned">
+        <div className="celebration-card-heading">
+          <h2>A little more, on the way.</h2>
+          <span>COMING NEXT</span>
+        </div>
+        <div>
+          {[
+            {
+              title: "Teams & Services",
+              text: "A place for your family, helpers and wedding team.",
+              href: "/app/departments",
+              icon: "people" as const,
+            },
+            ...(organizer
+              ? [
+                  {
+                    title: "Budget & Expenses",
+                    text: "Keep agreed costs and pending dues together.",
+                    href: "/app/budget",
+                    icon: "wallet" as const,
+                  },
+                ]
+              : []),
+            {
+              title: "Wedding memories",
+              text: "A shared home for the moments you’ll keep.",
+              href: "/app/photos",
+              icon: "camera" as const,
+            },
+          ].map((module) => (
+            <Link key={module.title} to={module.href}>
+              <Icon name={module.icon} />
+              <h3>{module.title}</h3>
+              <p>{module.text}</p>
+              <span>
+                Coming next <Icon name="arrow" />
+              </span>
+            </Link>
+          ))}
+        </div>
+      </section>
+    </div>
   );
 }

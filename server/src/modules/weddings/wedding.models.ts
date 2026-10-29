@@ -1,6 +1,17 @@
 import mongoose from "mongoose";
 import { randomUUID } from "node:crypto";
 
+export const weddingRoles = [
+  "Admin",
+  "Organizer",
+  "Manager",
+  "Worker",
+] as const;
+
+export function canOrganize(role: string | null | undefined) {
+  return role === "Admin" || role === "Organizer";
+}
+
 const familySchema = new mongoose.Schema(
   {
     owner: {
@@ -45,9 +56,32 @@ const weddingSchema = new mongoose.Schema(
         },
         role: {
           type: String,
-          enum: ["Organizer", "Manager", "Worker"],
+          enum: weddingRoles,
           required: true,
         },
+        invitedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+      },
+    ],
+    // Kept with membership so accepting a link is one atomic document update.
+    // Never apply a TTL index here: that would delete the wedding itself.
+    teamInvites: [
+      {
+        tokenHash: { type: String, required: true },
+        role: { type: String, enum: weddingRoles, required: true },
+        invitedBy: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User",
+          required: true,
+        },
+        createdAt: { type: Date, default: Date.now },
+        expiresAt: { type: Date, required: true },
+        revokedAt: { type: Date, default: null },
+        acceptedBy: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User",
+          default: null,
+        },
+        acceptedAt: { type: Date, default: null },
       },
     ],
     brideName: { type: String, required: true, trim: true },
@@ -70,5 +104,15 @@ const weddingSchema = new mongoose.Schema(
 
 // V1: a person participates in one wedding space.
 weddingSchema.index({ "members.userId": 1 }, { unique: true });
+weddingSchema.index({ "teamInvites.tokenHash": 1 });
 export const Family = mongoose.model("Family", familySchema);
 export const Wedding = mongoose.model("Wedding", weddingSchema);
+
+export function roleFor(wedding: InstanceType<typeof Wedding>, userId: string) {
+  const member = wedding.members.find(
+    (item) => item.userId.toString() === userId,
+  );
+  if (!member) return undefined;
+  // Older weddings stored their creator as Organizer. No data migration needed.
+  return wedding.createdBy.toString() === userId ? "Admin" : member.role;
+}

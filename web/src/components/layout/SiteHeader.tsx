@@ -10,7 +10,7 @@ type SiteHeaderProps = {
 const links = [
   { href: "#features", label: "The workspace" },
   { href: "#how-it-works", label: "How it works" },
-  { href: "#questions", label: "FAQs" },
+  { href: "#for-guests", label: "For your guests" },
 ];
 
 export function SiteHeader({ onStart }: SiteHeaderProps) {
@@ -19,7 +19,6 @@ export function SiteHeader({ onStart }: SiteHeaderProps) {
   return (
     <header className="site-header">
       <div className="page-container header-inner">
-
         <Brand />
 
         <nav className="desktop-nav" aria-label="Main navigation">
@@ -31,7 +30,6 @@ export function SiteHeader({ onStart }: SiteHeaderProps) {
         </nav>
 
         <div className="header-actions">
-
           <Link className="login-button" to="/login">
             Log in
           </Link>
@@ -49,11 +47,10 @@ export function SiteHeader({ onStart }: SiteHeaderProps) {
             aria-label={menuOpen ? "Close navigation" : "Open navigation"}
             aria-expanded={menuOpen}
             aria-controls="mobile-navigation"
-            onClick={() => setMenuOpen(menuOpen)}
+            onClick={() => setMenuOpen(!menuOpen)}
           >
             <Icon name={menuOpen ? "close" : "menu"} />
           </button>
-
         </div>
       </div>
 
@@ -67,7 +64,7 @@ export function SiteHeader({ onStart }: SiteHeaderProps) {
             <a
               key={link.href}
               href={link.href}
-              onClick={() => setMenuOpen(prev=>!prev)}
+              onClick={() => setMenuOpen(false)}
             >
               {link.label}
               <Icon name="arrow" />

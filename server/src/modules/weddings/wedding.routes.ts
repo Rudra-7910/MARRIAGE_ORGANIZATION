@@ -1,7 +1,7 @@
 import { Router } from "express";
-import type { Request } from "express";
+import mongoose from "mongoose";
 import { z } from "zod";
-import { Family, Wedding } from "./wedding.models.js";
+import { Family, Wedding, canOrganize, roleFor } from "./wedding.models.js";
 import { User } from "../auth/user.model.js";
 import { createSessionMiddleware, checkCsrf } from "../auth/auth.session.js";
 import { httpError } from "../../middleware/error-handler.js";
@@ -12,6 +12,7 @@ const familyInput = z
     side: z.enum(["Bride", "Groom", "Both"]),
   })
   .strict();
+
 const weddingInput = z
   .object({
     brideName: z.string().trim().min(1).max(80),
@@ -20,7 +21,6 @@ const weddingInput = z
     startTime: z
       .string()
       .regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Enter a valid ceremony time."),
-    // End time can be after midnight for an Indian wedding.
     endTime: z.union([
       z.literal(""),
       z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),
@@ -59,6 +59,7 @@ const weddingInput = z
       }, "Use an HTTPS YouTube link."),
   })
   .strict();
+
 function checkCoordinates(value: {
   latitude: number | null;
   longitude: number | null;
@@ -69,16 +70,6 @@ function checkCoordinates(value: {
       "INVALID_INPUT",
       "Add both latitude and longitude, or leave both empty.",
     );
-}
-async function currentWedding(req: Request) {
-  return Wedding.findOne({ "members.userId": req.session.userId });
-}
-function requiredWeddingError() {
-  return httpError(
-    409,
-    "WEDDING_REQUIRED",
-    "Create your wedding to open the dashboard.",
-  );
 }
 // This is the deliberate guest-safe projection, also used by the organizer UI.
 // No membership IDs, account email, family ownership or financial data is public.
@@ -101,15 +92,12 @@ function details(wedding: InstanceType<typeof Wedding>) {
     youtube: wedding.youtube,
   };
 }
-function roleFor(wedding: InstanceType<typeof Wedding>, userId: string) {
-  return wedding.members.find((member) => member.userId.toString() === userId)
-    ?.role;
-}
-async function workspace(req: Request) {
-  const wedding = await currentWedding(req);
-  const family = wedding
-    ? await Family.findById(wedding.family)
-    : await Family.findOne({ owner: req.session.userId });
+// Format a consistent response without making hidden database calls.
+function workspaceData(
+  wedding: InstanceType<typeof Wedding> | null,
+  family: InstanceType<typeof Family> | null,
+  userId: string,
+) {
   return {
     family: family
       ? { id: family.id, name: family.name, side: family.side }
@@ -121,20 +109,14 @@ async function workspace(req: Request) {
           updatedAt: wedding.updatedAt.toISOString(),
         }
       : null,
-    role: wedding ? roleFor(wedding, req.session.userId!) : null,
+    role: wedding ? roleFor(wedding, userId) : null,
   };
-}
-function duplicate(error: unknown) {
-  return (
-    typeof error === "object" &&
-    error !== null &&
-    "code" in error &&
-    error.code === 11000
-  );
 }
 
 export function createWeddingRouter() {
   const router = Router();
+
+  //guest website
   router.get("/public/weddings/:publicId", async (req, res) => {
     const wedding = await Wedding.findOne({ publicId: req.params.publicId });
     if (!wedding)
@@ -145,6 +127,7 @@ export function createWeddingRouter() {
       );
     res.json({ data: details(wedding) });
   });
+
   const privatePaths = ["/setup", "/dashboard", "/families", "/weddings"];
   router.use(privatePaths, createSessionMiddleware());
   router.use(privatePaths, async (req, _res, next) => {
@@ -155,12 +138,19 @@ export function createWeddingRouter() {
       throw httpError(401, "UNAUTHENTICATED", "Please log in to continue.");
     next();
   });
-  router.get("/setup", async (req, res) =>
-    res.json({ data: await workspace(req) }),
-  );
+
+  router.get("/setup", async (req, res) => {
+    const userId = req.session.userId!;
+    const wedding = await Wedding.findOne({ "members.userId": userId });
+    const family = wedding
+      ? await Family.findById(wedding.family)
+      : await Family.findOne({ owner: userId });
+    res.json({ data: workspaceData(wedding, family, userId) });
+  });
   router.get("/dashboard", async (req, res) => {
-    const data = await workspace(req);
-    if (!data.wedding) {
+    const userId = req.session.userId!;
+    const wedding = await Wedding.findOne({ "members.userId": userId });
+    if (!wedding) {
       res.status(409).json({
         error: {
           code: "WEDDING_REQUIRED",
@@ -170,22 +160,28 @@ export function createWeddingRouter() {
       });
       return;
     }
-    res.json({ data });
+    const family = await Family.findById(wedding.family);
+    res.json({ data: workspaceData(wedding, family, userId) });
   });
   router.post("/families", checkCsrf, async (req, res) => {
     const input = familyInput.safeParse(req.body);
     if (!input.success)
       throw httpError(422, "INVALID_INPUT", input.error.issues[0].message);
-    if (await currentWedding(req))
+    const userId = req.session.userId!;
+    if (await Wedding.exists({ "members.userId": userId }))
       throw httpError(
         409,
         "WEDDING_EXISTS",
         "You already belong to a wedding.",
       );
+    let family;
     try {
-      await Family.create({ ...input.data, owner: req.session.userId });
+      family = await Family.create({ ...input.data, owner: userId });
     } catch (error) {
-      if (duplicate(error))
+      if (
+        error instanceof mongoose.mongo.MongoServerError &&
+        error.code === 11000
+      )
         throw httpError(
           409,
           "FAMILY_EXISTS",
@@ -193,7 +189,14 @@ export function createWeddingRouter() {
         );
       throw error;
     }
-    res.status(201).json({ data: await workspace(req) });
+    // A team invitation may have been accepted while the family was saved.
+    const wedding = await Wedding.findOne({ "members.userId": userId });
+    const currentFamily = wedding
+      ? await Family.findById(wedding.family)
+      : family;
+    res
+      .status(201)
+      .json({ data: workspaceData(wedding, currentFamily, userId) });
   });
   router.post("/weddings", checkCsrf, async (req, res) => {
     const input = weddingInput.safeParse(req.body);
@@ -203,21 +206,25 @@ export function createWeddingRouter() {
     const family = await Family.findOne({ owner: req.session.userId });
     if (!family)
       throw httpError(409, "FAMILY_REQUIRED", "Register your family first.");
-    if (await currentWedding(req))
+    if (await Wedding.exists({ "members.userId": req.session.userId }))
       throw httpError(
         409,
         "WEDDING_EXISTS",
         "You already belong to a wedding.",
       );
+    let wedding;
     try {
-      await Wedding.create({
+      wedding = await Wedding.create({
         ...input.data,
         family: family.id,
         createdBy: req.session.userId,
-        members: [{ userId: req.session.userId, role: "Organizer" }],
+        members: [{ userId: req.session.userId, role: "Admin" }],
       });
     } catch (error) {
-      if (duplicate(error))
+      if (
+        error instanceof mongoose.mongo.MongoServerError &&
+        error.code === 11000
+      )
         throw httpError(
           409,
           "WEDDING_EXISTS",
@@ -225,12 +232,20 @@ export function createWeddingRouter() {
         );
       throw error;
     }
-    res.status(201).json({ data: await workspace(req) });
+    res
+      .status(201)
+      .json({ data: workspaceData(wedding, family, req.session.userId!) });
   });
   router.patch("/weddings/current", checkCsrf, async (req, res) => {
-    const wedding = await currentWedding(req);
-    if (!wedding) throw requiredWeddingError();
-    if (roleFor(wedding, req.session.userId!) !== "Organizer")
+    const userId = req.session.userId!;
+    const wedding = await Wedding.findOne({ "members.userId": userId });
+    if (!wedding)
+      throw httpError(
+        409,
+        "WEDDING_REQUIRED",
+        "Create your wedding to open the dashboard.",
+      );
+    if (!canOrganize(roleFor(wedding, req.session.userId!)))
       throw httpError(
         403,
         "FORBIDDEN",
@@ -248,7 +263,10 @@ export function createWeddingRouter() {
         _id: wedding._id,
         __v: version,
         members: {
-          $elemMatch: { userId: req.session.userId, role: "Organizer" },
+          $elemMatch: {
+            userId: req.session.userId,
+            role: { $in: ["Admin", "Organizer"] },
+          },
         },
       },
       { $set: values, $inc: { __v: 1 } },
@@ -260,7 +278,8 @@ export function createWeddingRouter() {
         "WEDDING_CONFLICT",
         "These details changed in another tab. Reload the latest details before saving.",
       );
-    res.json({ data: await workspace(req) });
+    const family = await Family.findById(updated.family);
+    res.json({ data: workspaceData(updated, family, userId) });
   });
   return router;
 }

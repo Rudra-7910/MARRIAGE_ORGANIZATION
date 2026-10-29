@@ -74,8 +74,12 @@ export function WeddingForm({
               <input type="date" required {...register("date")} />
             </label>
             <label>
-              Ceremony start time
+              Ceremony / shubh muhurat time (IST)
               <input type="time" required {...register("startTime")} />
+              <small>
+                Your countdown uses this saved time. Enter the muhurat agreed by
+                your family.
+              </small>
             </label>
             <label>
               End time (optional)
@@ -183,7 +187,11 @@ export function WeddingForm({
             </div>
             <label>
               Welcome note (optional)
-              <textarea maxLength={1000} {...register("welcome")} />
+              <textarea
+                maxLength={1000}
+                placeholder="आपके स्नेह और आशीर्वाद से ही हमारा यह शुभ अवसर पूर्ण होगा।"
+                {...register("welcome")}
+              />
             </label>
             <label>
               YouTube livestream link (optional)

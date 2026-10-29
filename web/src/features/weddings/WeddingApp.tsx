@@ -1,3 +1,4 @@
+import { apiMessage } from "../../lib/api";
 import {
   Link,
   Navigate,
@@ -9,7 +10,7 @@ import {
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { AuthUser } from "../../lib/api";
 import {
-  apiMessage,
+  canOrganize,
   editWedding,
   getDashboard,
   needsSetup,
@@ -20,13 +21,13 @@ import { SetupPage } from "./SetupPage";
 import { WeddingForm } from "./WeddingForm";
 import { DashboardLayout } from "./DashboardLayout";
 import { WeddingOverview } from "./WeddingOverview";
+import { PeoplePage } from "./PeoplePage";
 import { ServicesPage } from "./ServicesPage";
 import { GuestsPage, InvitationPage } from "./InvitationsPage";
 import {
   BudgetPage,
   FunctionsPage,
   GuestWebsitePage,
-  PeoplePage,
   PhotosPage,
   TeamsPage,
 } from "./WorkspacePages";
@@ -47,9 +48,10 @@ function WeddingWorkspace({ user }: { user: AuthUser }) {
     location.pathname.endsWith("/settings");
   const query = useQuery({
     queryKey: ["wedding-dashboard", user.id],
-    queryFn: getDashboard,
-    staleTime: 0,
-    refetchInterval: editing ? false : 5000,
+    queryFn: ({ signal }) => getDashboard(signal),
+    staleTime: 30000,
+    refetchInterval: editing ? false : 30000,
+    refetchIntervalInBackground: false,
     refetchOnWindowFocus: !editing,
   });
   if (signedOut(query.error)) return <Navigate to="/login" replace />;
@@ -60,7 +62,7 @@ function WeddingWorkspace({ user }: { user: AuthUser }) {
         Opening your wedding…
       </main>
     );
-  if (query.isError)
+  if (query.isError && !query.data)
     return (
       <main className="ws-empty">
         <h1>Couldn’t open your wedding</h1>
@@ -71,9 +73,9 @@ function WeddingWorkspace({ user }: { user: AuthUser }) {
       </main>
     );
 
-  const data = query.data;
+  const data = query.data!;
   if (!data.wedding) return <Navigate to="/app/setup" replace />;
-  const organizer = data.role === "Organizer";
+  const organizer = canOrganize(data.role);
   const editPage = organizer ? (
     <EditWedding
       userId={user.id}
@@ -85,9 +87,18 @@ function WeddingWorkspace({ user }: { user: AuthUser }) {
   );
   return (
     <DashboardLayout user={user} data={data}>
+      {query.isError && (
+        <p className="celebration-sync-notice" role="status">
+          Couldn’t refresh your workspace. Showing your last saved details.
+          <button onClick={() => query.refetch()}>Try again</button>
+        </p>
+      )}
       <Routes>
         <Route index element={<Navigate to="/app/overview" replace />} />
-        <Route path="overview" element={<WeddingOverview data={data} />} />
+        <Route
+          path="overview"
+          element={<WeddingOverview data={data} userId={user.id} />}
+        />
         <Route path="functions" element={<FunctionsPage data={data} />} />
         <Route path="departments" element={<TeamsPage />} />
         <Route
@@ -125,10 +136,7 @@ function WeddingWorkspace({ user }: { user: AuthUser }) {
           path="guest-website"
           element={<GuestWebsitePage data={data} />}
         />
-        <Route
-          path="members"
-          element={<PeoplePage user={user} data={data} />}
-        />
+        <Route path="members" element={<PeoplePage userId={user.id} />} />
         <Route path="settings" element={editPage} />
         <Route path="wedding/edit" element={editPage} />
         <Route path="*" element={<Navigate to="/app/overview" replace />} />

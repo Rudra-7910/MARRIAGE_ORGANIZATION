@@ -55,17 +55,6 @@ const categories: {
   },
 ];
 
-function mapsSearch(wedding: WeddingDetails, query: string) {
-  const location =
-    wedding.latitude !== null && wedding.longitude !== null
-      ? wedding.latitude + "," + wedding.longitude
-      : wedding.address + ", " + wedding.city;
-  return (
-    "https://www.google.com/maps/search/?api=1&query=" +
-    encodeURIComponent(query + " near " + location)
-  );
-}
-
 export function NearbyServices({ wedding }: { wedding: WeddingDetails }) {
   return (
     <section className="dash-nearby-section">
@@ -109,6 +98,10 @@ export function ServicesPage({ wedding }: { wedding: WeddingDetails }) {
   const initial = new URLSearchParams(window.location.search).get("category");
   const [categoryId, setCategoryId] = useState(initial || "all");
   const [search, setSearch] = useState("");
+  const savedLocation =
+    wedding.latitude !== null && wedding.longitude !== null
+      ? wedding.latitude + "," + wedding.longitude
+      : wedding.address + ", " + wedding.city;
   const visible = categories.filter(
     (category) =>
       (categoryId === "all" || category.id === categoryId) &&
@@ -200,7 +193,10 @@ export function ServicesPage({ wedding }: { wedding: WeddingDetails }) {
               </span>
               <a
                 className="ws-button ws-primary"
-                href={mapsSearch(wedding, category.query)}
+                href={
+                  "https://www.google.com/maps/search/?api=1&query=" +
+                  encodeURIComponent(category.query + " near " + savedLocation)
+                }
                 target="_blank"
                 rel="noreferrer"
               >

@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { rateLimit } from "express-rate-limit";
 import bcrypt from "bcryptjs";
+import mongoose from "mongoose";
 import { z } from "zod";
 import {
   createSessionMiddleware,
@@ -110,9 +111,7 @@ export function createAuthRouter() {
       user = await User.create({ name, email, passwordHash: password });
     } catch (error) {
       if (
-        typeof error === "object" &&
-        error !== null &&
-        "code" in error &&
+        error instanceof mongoose.mongo.MongoServerError &&
         error.code === 11000
       ) {
         throw httpError(

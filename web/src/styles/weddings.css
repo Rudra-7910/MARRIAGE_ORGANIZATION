@@ -203,7 +203,7 @@
   opacity: 0.6;
   cursor: wait;
 }
-:where(.setup-page, .live-guest-page) :focus-visible {
+:where(.setup-page) :focus-visible {
   outline: 2px solid #537e5a;
   outline-offset: 3px;
 }
@@ -221,8 +221,7 @@
     padding: 19px;
   }
 }
-.setup-page,
-.live-guest-page {
+.setup-page {
   min-height: 100vh;
   background: #fbf7f3;
   color: #293b30;
@@ -448,99 +447,6 @@
   background: #fafbf6;
   font-size: 11px;
 }
-.live-guest-hero {
-  background: #f5eee3 url("/images/wedding-vines.svg") no-repeat right center;
-  text-align: center;
-  padding: 70px 24px;
-  border-bottom: 1px solid #e7ddcf;
-}
-.live-guest-hero h1 {
-  font-family: Newsreader, Georgia, serif;
-  font-size: 62px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  line-height: 1.12;
-  margin: 25px auto;
-  overflow-wrap: anywhere;
-}
-.live-guest-hero h1 em {
-  color: #ad747a;
-  font-size: 36px;
-}
-.live-guest-hero p {
-  color: #7b7c69;
-  font-size: 14px;
-  margin: 22px 0;
-}
-.live-guest-hero > span:last-child {
-  font-family: Newsreader, serif;
-  font-size: 24px;
-  color: #9a7771;
-}
-.live-guest-body {
-  max-width: 740px;
-  margin: auto;
-  padding: 35px 24px;
-}
-.live-welcome {
-  font-family: Newsreader, serif;
-  font-size: 26px;
-  line-height: 1.6;
-  text-align: center;
-  color: #977275;
-  margin: 0 0 35px;
-  white-space: pre-line;
-}
-.live-contact {
-  text-align: center;
-  padding: 30px;
-  border-top: 1px solid #e3ded1;
-  margin-top: 30px;
-}
-.live-contact h2,
-.live-stream h2 {
-  font-family: Newsreader, serif;
-  font-size: 28px;
-  margin-bottom: 16px;
-}
-.live-contact p {
-  font-size: 13px;
-  color: #818b74;
-  margin-bottom: 20px;
-}
-.live-guest-footer {
-  padding: 20px;
-  text-align: center;
-  color: #9c9e8b;
-  font-size: 10px;
-}
-.home-setup-diagram {
-  max-width: 800px;
-  margin: 45px auto 0;
-  text-align: left;
-}
-.home-setup-diagram .setup-story {
-  position: static;
-  padding: 32px 40px;
-}
-.home-setup-diagram .setup-story ol {
-  flex-direction: row;
-  gap: 22px;
-}
-.home-setup-diagram .setup-story li {
-  flex: 1;
-}
-.home-setup-diagram .setup-story li::after {
-  display: none;
-}
-.home-setup-diagram .setup-story h2 {
-  font-size: 30px;
-  margin-bottom: 25px;
-}
-.home-setup-diagram .setup-reassurance {
-  font-size: 19px;
-}
 @media (max-width: 900px) {
   .setup-grid {
     grid-template-columns: minmax(0, 1fr) 270px;
@@ -581,16 +487,176 @@
     grid-template-columns: 90px minmax(0, 1fr);
     gap: 12px;
   }
-  .live-guest-hero {
-    padding: 48px 20px;
+}
+
+/* Wedding team invitation and access management. */
+.team-page > .dash-card {
+  margin-bottom: 24px;
+  padding: 24px;
+}
+.team-page .dash-card-heading {
+  margin-bottom: 18px;
+  padding: 0 0 16px;
+}
+.team-page .dash-badge {
+  font-size: 11px;
+}
+.team-note {
+  color: #64715f;
+  font-size: 13px;
+  line-height: 1.9;
+  margin-block: 12px;
+}
+.team-member {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+  padding-block: 18px;
+  border-top: 1px solid #e4e7da;
+}
+.team-member-name {
+  flex: 1;
+  min-width: 150px;
+  overflow-wrap: anywhere;
+}
+.team-member-name strong {
+  font-size: 14px;
+  color: #285447;
+}
+.team-member-name p,
+.team-member-name small {
+  font-size: 12px;
+  color: #67735e;
+  line-height: 1.8;
+}
+.team-member-name small {
+  display: block;
+}
+.team-page .dash-card-heading + .team-member {
+  border-top: 0;
+}
+.team-invite-form {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 18px;
+}
+.team-invite-form label,
+.team-created-link label {
+  display: block;
+  color: #36543d;
+  font-size: 13px;
+  font-weight: 600;
+}
+.team-invite-form select,
+.team-created-link input {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  margin-top: 8px;
+  border: 1px solid #cdd8c3;
+  border-radius: 8px;
+  background: #fffefa;
+  color: #285447;
+  font: inherit;
+}
+.team-invite-form label {
+  flex: 1;
+  max-width: 300px;
+  min-width: 170px;
+}
+.team-created-link,
+.team-confirm {
+  padding: 20px;
+  margin-top: 18px;
+  border: 1px solid #d7dfc8;
+  border-radius: 10px;
+  background: #f3f5e9;
+  line-height: 1.9;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.team-created-link > p {
+  margin-block: 8px 14px;
+  color: #627057;
+}
+.team-created-link .ws-button {
+  margin-top: 14px;
+}
+.team-confirm {
+  flex-basis: 100%;
+  margin-top: 0;
+  background: #fff2e6;
+  border-color: #e5c6b1;
+}
+.team-confirm .ws-button {
+  margin: 10px 8px 0 0;
+}
+.team-page .team-role-grid {
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+}
+.team-invite-page {
+  min-height: 100vh;
+}
+.team-invite-card {
+  width: min(640px, calc(100% - 40px));
+  margin: 60px auto;
+  padding: 38px;
+  border: 1px solid #dccaab;
+  border-top: 4px solid #b68e51;
+  border-radius: 16px;
+  background: #fffdf5;
+  box-shadow: 0 12px 40px #33482b08;
+}
+.team-invite-card h1 {
+  font: 42px/1.15 Newsreader, Georgia, serif;
+  color: #285447;
+  margin: 20px 0;
+}
+.team-invite-card h2 {
+  font: 30px/1.3 Newsreader, Georgia, serif;
+  color: #285447;
+  overflow-wrap: anywhere;
+}
+.team-invite-card > p {
+  margin-block: 16px;
+  color: #63705b;
+  line-height: 1.9;
+  font-size: 14px;
+}
+.team-invite-card .team-invite-date {
+  color: #8a6538;
+  font-size: 20px;
+  margin-top: 8px;
+}
+.team-invite-access {
+  border: 1px solid #dce3ce;
+  border-radius: 10px;
+  background: #f1f4e8;
+  padding: 18px;
+  margin-block: 22px;
+}
+.team-invite-access p {
+  line-height: 1.9;
+  font-size: 14px;
+  color: #57664e;
+  margin-top: 10px;
+}
+.team-invite-access .dash-badge {
+  font-size: 13px;
+  padding: 8px 12px;
+  color: #285447;
+  background: #e1ead5;
+}
+@media (max-width: 600px) {
+  .team-invite-card {
+    padding: 26px 20px;
+    margin-block: 28px;
   }
-  .live-guest-hero h1 {
-    font-size: 46px;
-  }
-  .home-setup-diagram .setup-story {
-    padding: 25px;
-  }
-  .home-setup-diagram .setup-story ol {
-    flex-direction: column;
+  .team-invite-card h1 {
+    font-size: 34px;
   }
 }

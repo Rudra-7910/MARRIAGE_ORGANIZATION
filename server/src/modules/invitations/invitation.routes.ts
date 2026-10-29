@@ -23,7 +23,10 @@ const guestInput = z
     side: z.enum(["Bride", "Groom", "Both"]),
   })
   .strict();
+
+
 const versionInput = z.object({ version: z.number().int().min(0) }).strict();
+
 const emailInput = versionInput
   .extend({
     weddingVersion: z.number().int().min(0),
@@ -46,6 +49,9 @@ function parse<T>(schema: z.ZodType<T>, value: unknown): T {
     throw httpError(422, "INVALID_INPUT", result.error.issues[0].message);
   return result.data;
 }
+
+//status nikal ,  of email
+
 function statusFor(guest: InstanceType<typeof Guest>) {
   const invitation = guest.invitation;
   if (!invitation) return "not_sent";
@@ -56,6 +62,8 @@ function statusFor(guest: InstanceType<typeof Guest>) {
     return "unconfirmed";
   return invitation.status;
 }
+
+
 function guestDetails(guest: InstanceType<typeof Guest>) {
   const invitation = guest.invitation;
   const status = statusFor(guest);
@@ -133,7 +141,7 @@ export function createInvitationRouter(
       !wedding.members.some(
         (member) =>
           member.userId.toString() === req.session.userId &&
-          member.role === "Organizer",
+          (member.role === "Admin" || member.role === "Organizer"),
       )
     )
       throw httpError(

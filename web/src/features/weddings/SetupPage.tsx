@@ -2,87 +2,16 @@ import { Link, Navigate, useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { Brand } from "../../components/ui/Brand";
-import { logout } from "../../lib/api";
+import { logout, apiMessage } from "../../lib/api";
 import type { AuthUser } from "../../lib/api";
 import {
-  apiMessage,
   createFamily,
   createWedding,
   getSetup,
   signedOut,
 } from "../../lib/weddings";
-import type { Workspace } from "../../lib/weddings";
 import { WeddingForm } from "./WeddingForm";
 
-export function AccountHeader({ user }: { user: AuthUser }) {
-  const navigate = useNavigate();
-  const cache = useQueryClient();
-  const mutation = useMutation({
-    mutationFn: logout,
-    onSuccess: () => {
-      cache.clear();
-      navigate("/login", { replace: true });
-    },
-  });
-  return (
-    <>
-      <header className="setup-header">
-        <Brand />
-        <div>
-          <span>{user.name}</span>
-          <button
-            className="ws-text-link"
-            onClick={() => mutation.mutate()}
-            disabled={mutation.isPending}
-          >
-            Log out
-          </button>
-        </div>
-      </header>
-      {mutation.isError && (
-        <p className="ws-form-error" role="alert">
-          {apiMessage(mutation.error)}
-        </p>
-      )}
-    </>
-  );
-}
-export function SetupDiagram() {
-  return (
-    <aside className="setup-story">
-      <span className="ws-eyebrow">ONE BEAUTIFUL BEGINNING</span>
-      <h2>
-        From your family,
-        <br />
-        <em>to your forever.</em>
-      </h2>
-      <ol aria-label="Wedding setup flow">
-        {["Your family", "Your wedding", "One shared dashboard"].map(
-          (label, index) => (
-            <li key={label}>
-              <span>{index + 1}</span>
-              <div>
-                <strong>{label}</strong>
-                <p>
-                  {
-                    [
-                      "Give your family a shared place.",
-                      "Add the details that make it yours.",
-                      "Your plans and guest website, in sync.",
-                    ][index]
-                  }
-                </p>
-              </div>
-            </li>
-          ),
-        )}
-      </ol>
-      <p className="setup-reassurance">
-        You can change these details later. Your guest website stays in sync.
-      </p>
-    </aside>
-  );
-}
 export function SetupPage({ user }: { user: AuthUser }) {
   const query = useQuery({
     queryKey: ["wedding-setup", user.id],
@@ -91,21 +20,27 @@ export function SetupPage({ user }: { user: AuthUser }) {
   });
   const cache = useQueryClient();
   const navigate = useNavigate();
+  const signOut = useMutation({
+    mutationFn: logout,
+    onSuccess: () => {
+      cache.clear();
+      navigate("/login", { replace: true });
+    },
+  });
   const { register, handleSubmit } = useForm<{
     name: string;
     side: "Bride" | "Groom" | "Both";
   }>({ defaultValues: { name: "", side: "Both" } });
-  function saved(data: Workspace) {
-    cache.setQueryData(["wedding-setup", user.id], data);
-  }
   const familyMutation = useMutation({
     mutationFn: createFamily,
-    onSuccess: saved,
+    onSuccess: (data) => {
+      cache.setQueryData(["wedding-setup", user.id], data);
+    },
   });
   const weddingMutation = useMutation({
     mutationFn: createWedding,
     onSuccess: (data) => {
-      saved(data);
+      cache.setQueryData(["wedding-setup", user.id], data);
       cache.setQueryData(["wedding-dashboard", user.id], data);
       navigate("/app/overview", { replace: true });
     },
@@ -114,7 +49,24 @@ export function SetupPage({ user }: { user: AuthUser }) {
   if (query.data?.wedding) return <Navigate to="/app/overview" replace />;
   return (
     <div className="setup-page">
-      <AccountHeader user={user} />
+      <header className="setup-header">
+        <Brand />
+        <div>
+          <span>{user.name}</span>
+          <button
+            className="ws-text-link"
+            onClick={() => signOut.mutate()}
+            disabled={signOut.isPending}
+          >
+            Log out
+          </button>
+        </div>
+      </header>
+      {signOut.isError && (
+        <p className="ws-form-error" role="alert">
+          {apiMessage(signOut.error)}
+        </p>
+      )}
       <main className="setup-main">
         <div className="setup-intro">
           <span className="ws-eyebrow">LET’S MAKE ROOM FOR YOUR PEOPLE</span>
@@ -224,7 +176,39 @@ export function SetupPage({ user }: { user: AuthUser }) {
                 </>
               )}
             </div>
-            <SetupDiagram />
+            <aside className="setup-story">
+              <span className="ws-eyebrow">ONE BEAUTIFUL BEGINNING</span>
+              <h2>
+                From your family,
+                <br />
+                <em>to your forever.</em>
+              </h2>
+              <ol aria-label="Wedding setup flow">
+                {["Your family", "Your wedding", "One shared dashboard"].map(
+                  (label, index) => (
+                    <li key={label}>
+                      <span>{index + 1}</span>
+                      <div>
+                        <strong>{label}</strong>
+                        <p>
+                          {
+                            [
+                              "Give your family a shared place.",
+                              "Add the details that make it yours.",
+                              "Your plans and guest website, in sync.",
+                            ][index]
+                          }
+                        </p>
+                      </div>
+                    </li>
+                  ),
+                )}
+              </ol>
+              <p className="setup-reassurance">
+                You can change these details later. Your guest website stays in
+                sync.
+              </p>
+            </aside>
           </div>
         )}
       </main>

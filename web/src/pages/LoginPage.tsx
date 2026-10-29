@@ -4,12 +4,13 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { login } from "../lib/api";
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { inviteTokenFromState } from "../lib/team";
 import { Brand } from "../components/ui/Brand";
 import { Icon } from "../components/ui/Icon";
 import { InfoDialog } from "../components/ui/InfoDialog";
 import type { DialogTopic } from "../components/ui/InfoDialog";
-import { LoginStory } from "../features/auth/components/LoginStory";
+import { LoginStory } from "../features/auth/LoginStory";
 
 const loginSchema = z.object({
   email: z
@@ -27,13 +28,18 @@ export function LoginPage() {
   const [dialogTopic, setDialogTopic] = useState<DialogTopic | null>(null);
   const [passwordVisible, setPasswordVisible] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+  const teamInviteToken = inviteTokenFromState(location.state);
   const queryClient = useQueryClient();
   const mutation = useMutation({
     mutationFn: login,
     onSuccess: (user) => {
       queryClient.clear();
       queryClient.setQueryData(["auth-user"], user);
-      navigate("/app/setup", { replace: true });
+      navigate(
+        teamInviteToken ? "/team-invites#" + teamInviteToken : "/app/setup",
+        { replace: true },
+      );
     },
   });
   const {
@@ -86,6 +92,12 @@ export function LoginPage() {
               onChange={() => mutation.reset()}
               noValidate
             >
+              {teamInviteToken && (
+                <p className="team-note">
+                  After logging in, you’ll return to your wedding team
+                  invitation.
+                </p>
+              )}
               <div className="login-field">
                 <label htmlFor="login-email">Email address</label>
                 <div
@@ -178,7 +190,10 @@ export function LoginPage() {
             </form>
             <div className="login-create-account">
               <span>New to Make My Marriage?</span>
-              <Link to="/signup">
+              <Link
+                to="/signup"
+                state={teamInviteToken ? { teamInviteToken } : undefined}
+              >
                 Create an account
                 <Icon name="arrow" />
               </Link>

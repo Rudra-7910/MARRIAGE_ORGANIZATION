@@ -2,6 +2,16 @@
 
 Project: [Make My Marriage](https://stitch.withgoogle.com/projects/880870202033707852).
 
+Approved and implemented Celebration Review (29 October 2026):
+
+- A — Homepage: `9290dddb2edd48588c927583c54dd63b`.
+- B — Organizer Home: `e8c83df8fe04402a800e27520c0b0757`.
+- C — Guest Website: `fc0f5bb1e3574a288ca1ef341d54369d`.
+
+The implementation follows their forest/ivory editorial layout, warm photography, useful organizer actions and invitation-style guest experience. It corrects leftover prototype names/dates and out-of-scope claims. The homepage’s example is explicitly illustrative. Real pages use fetched wedding/guest data and decorative invitation-detail artwork, since personal photo uploads are not connected. They never present the prototype couple or Jaipur palace as a user’s own photograph/venue. Images from the approved references are optimized under `web/public/images/celebration/` in 720px and full-size WebP variants.
+
+The shared countdown uses the saved wedding date/start time in IST and a local clock, not API polling each second. New email/public invitation copy includes a Ganesh invocation and warm Hindi blessings; organizer-authored notes remain editable. The original sidebar/section navigation stays available, with backend-unconnected modules labeled coming next. No RSVP, accommodation, transport or booking feature is introduced.
+
 Email invitation references (29 October 2026):
 
 - Send Email Invitations: `3b957e21e44949d69351496d3002cf94`.
@@ -26,7 +36,7 @@ Visual references used for the retained workspace:
 - People & Access: `df94ba4c2bea4598b5aa73bd3f2392f3`.
 - Guest Website: `aa16d73e32d344048e6a99c0e82a663a`.
 
-The dashboard retains the original Stitch sidebar/header, attention panel, ceremony card, teams table, spending summary, updates area and nearby service discovery. All sections remain accessible after wedding creation. Sample names, vendor profiles, ratings, money amounts and task progress are omitted; unconnected features show explicit empty states. Dashboard and guest website read actual wedding details through the API. No sample records are inserted into user accounts or used as a fallback.
+The dashboard retains the original Stitch sidebar/header and all section navigation after wedding creation. The revised overview shows fetched invitation attention items and metrics, the saved ceremony, countdown and nearby service discovery. Unconnected departments, expense tracking and photo collection use explicit empty states in their existing sections. No sample records are inserted into user accounts or used as a fallback.
 
 `web/public/images/stitch/ceremony-1.jpg` is retained only as a decorative login photograph. It is not represented as the current user's wedding photograph.
 

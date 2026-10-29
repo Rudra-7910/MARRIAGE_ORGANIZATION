@@ -9,14 +9,15 @@ export const api = axios.create({
   timeout: 15000,
 });
 
-function requestError(error: unknown) {
+export function apiMessage(error: unknown) {
   if (axios.isAxiosError<{ error?: { message?: string } }>(error)) {
-    return new Error(
+    return (
       error.response?.data?.error?.message ||
-        "Could not reach the server. Please try again.",
+      "Could not reach the server. Please try again."
     );
   }
-  return new Error("The request could not be completed. Please try again.");
+  if (error instanceof Error) return error.message;
+  return "Something went wrong. Please try again.";
 }
 
 export async function getCurrentUser(): Promise<AuthUser | null> {
@@ -26,33 +27,48 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
   } catch (error) {
     if (axios.isAxiosError(error) && error.response?.status === 401)
       return null;
-    throw requestError(error);
+    throw new Error(apiMessage(error));
   }
 }
 
-async function authRequest<T>(path: string, values = {}) {
+// Shared by every write. Fetch a fresh token from the current session.
+export async function getCsrfHeaders() {
+  const response = await api.get<{ data: { token: string } }>("/auth/csrf");
+  return { "X-CSRF-Token": response.data.data.token };
+}
+
+export async function login(values: { email: string; password: string }) {
   try {
-    // Keep CSRF protection: get the token using the same session cookie first.
-    const csrf = await api.get<{ data: { token: string } }>("/auth/csrf");
-    const response = await api.post<{ data: T }>("/auth/" + path, values, {
-      headers: { "X-CSRF-Token": csrf.data.data.token },
+    const response = await api.post<{ data: AuthUser }>("/auth/login", values, {
+      headers: await getCsrfHeaders(),
     });
     return response.data.data;
   } catch (error) {
-    throw requestError(error);
+    throw new Error(apiMessage(error));
   }
 }
-
-export function login(values: { email: string; password: string }) {
-  return authRequest<AuthUser>("login", values);
-}
-export function signup(values: {
+export async function signup(values: {
   name: string;
   email: string;
   password: string;
 }) {
-  return authRequest<AuthUser>("signup", values);
+  try {
+    const response = await api.post<{ data: AuthUser }>(
+      "/auth/signup",
+      values,
+      {
+        headers: await getCsrfHeaders(),
+      },
+    );
+    return response.data.data;
+  } catch (error) {
+    throw new Error(apiMessage(error));
+  }
 }
 export async function logout(): Promise<void> {
-  await authRequest<null>("logout");
+  try {
+    await api.post("/auth/logout", {}, { headers: await getCsrfHeaders() });
+  } catch (error) {
+    throw new Error(apiMessage(error));
+  }
 }
