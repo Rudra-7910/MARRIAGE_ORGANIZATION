@@ -47,9 +47,6 @@ export function TeamInvitePage() {
         </div>
       </header>
       <main className="team-invite-card">
-        <span className="dash-kicker">
-          <Icon name="people" /> A LITTLE MORE TOGETHER
-        </span>
         {!validToken ? (
           <>
             <h1>Invitation unavailable</h1>

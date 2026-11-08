@@ -1,4 +1,6 @@
 import mongoose from "mongoose";
+import { randomBytes } from "node:crypto";
+import { accessToken, tokenHash } from "../site/access-token.js";
 
 // One invitation per guest/family in V1. Store the exact email before sending it.
 // This makes a retry safe even when wedding details change after the first attempt.
@@ -45,10 +47,20 @@ const guestSchema = new mongoose.Schema(
       maxlength: 254,
     },
     side: { type: String, enum: ["Bride", "Groom", "Both"], required: true },
+    accessNonce: { type: String, select: false },
+    accessHash: { type: String, select: false },
+    accessRevoked: { type: Boolean, default: false },
+    invitedFunctionIds: [{ type: mongoose.Schema.Types.ObjectId }],
     invitation: { type: invitationSchema, default: null },
   },
   { timestamps: true },
 );
+guestSchema.pre("save", function () {
+  if (!this.isNew && !this.isModified("accessNonce")) return;
+  if (!this.accessNonce) this.accessNonce = randomBytes(16).toString("hex");
+  this.accessHash = tokenHash(accessToken("guest", this.id!, this.accessNonce));
+});
+guestSchema.index({ accessHash: 1 }, { sparse: true, unique: true });
 guestSchema.index({ wedding: 1, createdAt: -1, _id: -1 });
 
 export const Guest = mongoose.model("Guest", guestSchema);

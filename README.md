@@ -1,159 +1,123 @@
 # Make My Marriage
 
-TypeScript wedding organizer application: Vite/React, Express, Mongoose and MongoDB Atlas. The current working flow is **account → family → wedding → dashboard**, with organizer editing and a public guest website using the same MongoDB wedding record.
+A wedding planning application for Indian families. Organizers coordinate departments, track expenses and send invitations. Guests open a wedding website for ceremony details, directions, updates and approved photos without creating an account.
+
+## Stack
+
+- React, Vite and TypeScript; React Router, TanStack Query, Axios and React Hook Form with Zod.
+- Express and Mongoose, with MongoDB Atlas for application records and sessions.
+- Express sessions, CSRF protection and wedding-scoped role checks.
+- Resend for individual email invitations, AWS S3 for private photo storage and Socket.IO for workspace updates.
+- Optional Google Places and Hindi label translation; YouTube for ceremony streams.
+
+This is a modular monolith in one repository. In production, Express serves both the API and the built frontend.
 
 ## Run locally
 
-Use Node.js 22.13+ or 24 LTS. Project: `/home/rudra/Desktop/AI_MAKE_MY_MARRIAGE`.
+Use Node.js 22.13+ or 24 LTS. Install dependencies from the repository root:
 
-```bash
-npm install
+```sh
+npm ci
+```
+
+For a new checkout, copy `server/.env.example` to `server/.env`. Keep an existing `.env` file and its credentials. Configure these values before starting:
+
+| Variable | Purpose |
+| --- | --- |
+| `MONGODB_URI` | Atlas connection string; allow this machine’s IP in Atlas. |
+| `SESSION_SECRET` | A random secret of at least 32 characters. |
+| `APP_ORIGIN` | `http://127.0.0.1:3000` locally; the exact HTTPS origin in production. |
+| `TRUST_PROXY_CIDRS` | Leave empty locally. In production, list only the trusted proxy IPs or subnets. |
+
+```sh
 npm run dev
 ```
 
-Frontend: **http://127.0.0.1:3000**. Express: port 3001. Vite forwards same-origin `/api` requests to Express. `npm run dev:web` and `npm run dev:server` run them individually.
+Open **http://127.0.0.1:3000**. Express listens on port 3001; Vite proxies `/api` to it. Express starts only after MongoDB and its required indexes are ready. `npm run dev:web` and `npm run dev:server` run the processes separately.
 
-Configure the gitignored `server/.env` before starting. Use `server/.env.example` as a template for a fresh checkout:
+## Application flow
 
-- `MONGODB_URI`: your Atlas database connection string.
-- `SESSION_SECRET`: at least 32 characters; generate with `node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"`.
-- `APP_ORIGIN`: default `http://127.0.0.1:3000`. Local development also accepts `localhost` on that protocol/port; production requires the exact origin.
-- `TRUST_PROXY_CIDRS`: empty by default. Only set to actual trusted proxy IPs/subnets for TLS termination; restrict backend network access to those proxies. Blanket trust values and `/0` networks are rejected.
+**Account → family → wedding → dashboard.** A service provider can create a directory profile without registering a wedding.
 
-Both environments wait for MongoDB and required indexes before listening. Atlas must allow the machine's IP and the database user must be able to create indexes. A runtime disconnection makes readiness/auth unavailable. Keep credentials out of source control.
+- Authenticated account pages check the server session on entry. Signed-in visitors to login/signup return to their workspace. An expired session sends a private-page visitor to login, then back to the requested page. Team-invitation continuation takes priority.
+- Wedding details come from one MongoDB record. Organizers edit the date, ceremony time, venue, contact, welcome and YouTube link using the same form used at setup. Other focused pages refresh within 30 seconds; the guest URL stays the same.
+- Functions, departments, checklists and attention requests use saved planning data. Progress updates record who changed them and when. Version checks reject stale edits with HTTP 409.
+- Budget tracks agreed costs, paid amounts and pending dues in integer paise. Payment request keys prevent duplicate recordings; voided payments retain their audit history.
+- Guests are grouped by family and bride/groom side. Personal invitation links show the functions shared with that family. The public website shows the main wedding and functions marked public. No RSVP is required.
+- Guest photo uploads use private S3 storage and organizer review. Only approved photos appear in the public gallery.
+- Provider listings, reviews and contact details are persisted. Arrangements and payments are agreed directly with providers; the app does not book them.
 
-## What works
+The organizer overview and guest website display the saved ceremony date, venue and an IST countdown. Hindi invitation text is editable. Homepage examples are marked as samples and never send emails.
 
-- Session-based signup/login/logout through a shared Axios client; bcrypt hashing in the Mongoose save hook, HttpOnly cookies, CSRF/origin protection and authentication rate limits.
-- Register your family (name and bride/groom/both side), then create your wedding.
-- The blank wedding form collects couple names, date, ceremony start/optional end time, venue/address/city, optional coordinates, public contact role/phone, optional welcome note and YouTube link.
-- Dashboard access requires an existing wedding. Direct navigation without one goes to setup. The dashboard API returns a JSON 409 redirect instruction instead of fabricated data.
-- Organizer members edit wedding details using the same form. Server-side membership checks reject worker/manager writes, and version checks prevent stale edits from overwriting a newer save.
-- `/w/:publicId` is a login-free guest website with the saved names, date, venue, Google Maps directions, public contact and optional YouTube player.
-- Changes immediately appear in the editing organizer’s view through query-cache updates. Other focused guest/workspace pages refresh within 30 seconds and on focus; polling pauses in hidden tabs. Guest URLs remain stable after edits.
-- Guests & Invites saves real guest/family entries in MongoDB, with bride/groom/both grouping, search, pagination and version-checked edits. Only this wedding’s organizers can access these records.
-- Prepare a personal email for one saved family at a time. The live server-rendered preview includes saved wedding details, Google Maps directions, contact, optional YouTube link and the public wedding website. No guest login or RSVP.
-- Send immediately through Resend, with persisted `Submitting`, `Submitted`, `Failed` and `Unconfirmed` results. Concurrent requests atomically claim one send. Safe retries reuse the exact saved email and provider idempotency key.
+## Wedding roles
 
-The approved Stitch A/B/C Celebration Review designs now guide the homepage, organizer overview and public guest website. The original dashboard sidebar and all section routes remain behind the wedding-creation gate. Wedding identity, ceremony details, guest link, access and invitation metrics use API data. The organizer overview reuses the paginated guest query rather than requesting every guest or fetching each row individually. Unconnected features have explicit coming-next states instead of fake spending or task progress.
+| Role | Access |
+| --- | --- |
+| Creator / Admin | Manage the wedding and invite all roles. Only the creator can remove other Admins or Organizers. |
+| Organizer | Edit wedding details, manage expenses, photos and guest invitations; invite/remove Managers and Workers. |
+| Manager | Manage permitted department work; invite Workers and remove Workers they invited. No budget or guest-record access. |
+| Worker | Update assigned work and view department progress. No budget, guest records or team invitations. |
 
-The homepage has keyboard-accessible product-preview tabs, a local invitation-note preview and FAQ accordions. Its sample family and celebration photographs are illustrative; it never sends email. Organizer and public guest pages use decorative invitation artwork rather than displaying a sample couple/venue as the current user’s photograph. Approved Stitch photography is served as local WebP assets with responsive sizes; below-the-fold photos are lazy loaded. A YouTube player loads only after the guest chooses to open it. Restrained marigold/blush accents and hover/focus feedback carry across the redesigned pages.
+Roles are checked against the wedding in MongoDB on private requests. Hiding a navigation item does not grant or revoke API access.
 
-Both real wedding pages put the saved wedding date, AM/PM ceremony time with IST, and venue prominently in the wedding hero. A compact **Shubh muhurat** countdown inside that hero shows days, hours, minutes and seconds until the ceremony; it never displays the current time or an analog clock. It reads the saved wedding date and ceremony start time explicitly as IST (`+05:30`), updates locally each second and pauses its timer while hidden. The countdown performs no network requests and never shows negative time or claims a ceremony is live after its start. Digit motion respects reduced-motion preferences. The invitation artwork, Hindi welcome and other sections remain in place. The wedding form explains that organizers should enter their family-agreed auspicious time; the app does not calculate astrology. Editing those saved fields updates the countdown through the normal workspace/public data flow.
+Team links use `/team-invites#<token>`. They expire after seven days, are single-use and are not bound to an email address. The server stores only token hashes. Acceptance requires a signed-in account and uses the role saved in the invitation. Each account can belong to one wedding.
 
-New invitation drafts include `॥ श्री गणेशाय नमः ॥` and a respectful Hindi family invitation. The personal note stays editable, and a saved custom public welcome overrides the default Hindi blessing. Previously attempted emails retain their exact frozen payload for idempotent retries; a design/copy change never rewrites an earlier attempt.
+## Email and photo configuration
 
-Nearby service categories use the saved venue/address or coordinates to open a Google Maps search. Category photographs are decorative illustrations from Stitch, not actual vendor listings or wedding photos. The in-app directory has not been connected yet.
+For email invitations, set `RESEND_API_KEY` and `RESEND_FROM` in `server/.env`, then restart Express. Use a sender on a verified domain. Localhost guest links work only on your computer; real invitations need the deployed HTTPS `APP_ORIGIN`.
 
-The old sample records, localStorage wedding drafts and demo upload routes have been removed. Old `/demo/*` bookmarks route through the real authenticated flow. No wedding records are seeded for new users.
+Open **Guests & Invites → Add guest / family → Prepare invitation**. Preview the email before choosing **Send invitation now**. V1 sends one family at a time. Scheduling, bulk campaigns, automatic reminders and queues are deferred to V2.
 
-Expense tracking, a vendor directory, photo uploads and additional functions have frontend sections but no backend persistence yet. Their action buttons are disabled and marked coming soon. Earlier product documents describe planned work; the implemented invitation and team flows below take precedence for current V1.
+`Submitted` means the email provider accepted the request; inbox delivery is not tracked. A timeout can leave an `Unconfirmed` result. Check the provider before retrying: retries reuse the saved content and idempotency key, even after wedding edits. The guest website continues to show current details.
 
-## Wedding roles and team invitations
+For private S3 credentials, bucket permissions, CORS and photo cleanup, follow [AWS S3 setup](docs/AWS-S3-Setup.md). Integration settings, role rules, limits and API-key placeholders are in [V1 flows and configuration](docs/V1-Completion.md). Keep keys server-side and out of source control.
 
-Open **People & Access → choose role → Create invitation link → Copy invitation link**. Team links are shared manually, separately from guest invitation emails. Invitees log in/sign up, then explicitly accept without registering another family/wedding or verifying email.
-
-- Creator: protected wedding Admin; can invite all four roles and remove other Admins/Organizers. Existing creators stored as Organizer receive Admin capabilities without a database migration.
-- Other Admins/Organizers: edit wedding details, manage guest invitations, access finance, invite/remove Managers and Workers.
-- Manager: invite Workers and remove only Workers they invited. No finance or guest-record access. Department-level work/assignment is still planned.
-- Worker: no team invitations, finance or guest-record access. Budget is absent from navigation, overview links and direct page access for both Workers and Managers.
-
-Links are single-use bearer capabilities: anyone holding one can claim it after signing in, so share privately. They expire after seven days and are not email-address-bound. Each account belongs to one wedding; a link cannot replace an existing role. Remove and re-invite when a member’s role needs to change.
-
-URLs use `/team-invites#<random-token>`. Only a SHA-256 hash of the 256-bit token persists. Preview/accept send tokens in JSON bodies, keeping them out of API URLs and referrer headers. Login/signup preserve continuation in router history state, not redirect query parameters. Acceptance requires session + CSRF, reads the saved role and inviter’s current authority, and atomically consumes the invite while adding membership to the same wedding document. Version checks and the unique member-user index prevent conflicting joins and replay. Removing an inviter also revokes their outstanding links. Same-account acceptance retries are idempotent while the original membership remains.
-
-Team responses exclude token hashes/raw links; Managers/Workers do not receive others’ email addresses. Full links appear only at creation and can be revoked. Limits: 500 invitation records per wedding, 50 creations/hour/IP, 40 previews/minute/IP. In-process rate limits need a shared store before running multiple Express instances.
-
-Budget currently returns availability metadata only (`available:false`) to Admins/Organizers; Workers/Managers receive 403, including budget subpaths. Expense storage remains unimplemented. Membership is re-read from MongoDB for every private request rather than trusting a role in the session. Removal blocks subsequent private API requests; open workspaces refresh membership within 30 seconds/on focus. Socket-based access invalidation is not implemented yet.
-
-## Email invitations
-
-Set these placeholders in the gitignored `server/.env`, then restart Express:
-
-```dotenv
-RESEND_API_KEY=
-RESEND_FROM=
-```
-
-`RESEND_FROM` is a sender on your verified domain, for example `Your Wedding <invitations@your-domain.com>`. Resend’s test sender restricts recipients; configure a verified sender before inviting real families. Keep the API key server-side. `APP_ORIGIN` builds the guest website link; localhost links work only on your own computer, so use the deployed HTTPS origin for real invitations.
-
-Open **Guests & Invites → Add guest / family → Prepare invitation**. Review the recipient, subject, note and preview, then choose **Send invitation now**. Missing credentials leave saving/preview available and disable sending; there is no mock-success mode.
-
-V1 sends one accepted invitation per guest/family entry. Duplicate email addresses are allowed for families sharing an inbox; each entry is a separate send, so review your list. Editing a definitely rejected invitation clears that draft so corrected details can be prepared. Submitted or uncertain invitations cannot change recipient/content. A saved retry uses the original sender, recipient and content, even if the wedding is edited later. The linked website continues to show current wedding details.
-
-`Submitted` means Resend accepted the request, not that the email reached the inbox. No delivery webhook/open tracking is implemented. A timeout or server error is `Unconfirmed`, including abandoned sends after a 60-second lease. Check Resend before retrying. Uncertain sends can reuse their key for up to 23 hours; beyond that they are blocked for manual investigation, rather than sent again with a new key. Resend documents a 24-hour idempotency retention window. Scheduling, bulk campaigns, automatic retries/reminders and BullMQ are deferred to V2.
-
-Resend references: [sending API](https://resend.com/docs/api-reference/emails/send-email), [idempotency keys](https://resend.com/docs/dashboard/emails/idempotency-keys).
-
-## Structure
+## Code structure
 
 ```text
 web/src/
-  app/App.tsx                  Public/account routes and lazy loading
-  pages/HomePage.tsx           Homepage sections in display order
-  pages/LoginPage.tsx          Login validation, form state and submission
-  pages/SignupPage.tsx         Signup validation, form state and submission
-  features/auth/               Account gate and shared login/signup story
-  features/weddings/
-    SetupPage.tsx              Family setup, wedding setup and flow diagram
-    WeddingForm.tsx            Shared create/edit form
-    WeddingApp.tsx             Protected workspace routes and organizer edits
-    DashboardLayout.tsx        Stitch sidebar, header and responsive navigation
-    WeddingOverview.tsx        Dashboard using saved wedding details
-    PeoplePage.tsx             Wedding members and shareable role invitations
-    TeamInvitePage.tsx         Public invite preview and signed-in acceptance
-    WorkspacePages.tsx         Planning sections and guest website settings
-    ServicesPage.tsx           Nearby categories and Google Maps discovery
-    GuestWeddingPage.tsx       Public guest website
-    WeddingCountdown.tsx      Shared local IST countdown, with visibility cleanup
-    InvitationsPage.tsx        Saved guest directory and per-family email composer
-  lib/api.ts                   Axios client, auth, shared CSRF and error messages
-  lib/weddings.ts              Wedding API calls and frontend types
-  lib/invitations.ts           Axios guest/preview/send/retry calls
-  styles/                      Shared theme, login and wedding UI
-    celebration.css           Scoped A/B/C homepage, overview and guest design
+  app/                 Routes and lazy loading
+  pages/               Homepage, login, signup and recovery
+  features/
+    auth/              Session guard and shared account-page content
+    weddings/          Setup, dashboard, planning, budget, guests and settings
+    media/             Guest upload and public gallery
+    providers/         Provider profiles and reviews
+    integrations/      Place search, language switch and live updates
+  components/          Shared layout, brand, icons and dialogs
+  lib/                 Axios requests, types and shared formatters
+  styles/              Theme tokens and page styles
 server/src/
-  app.ts                       Route registration, request IDs and 404 handling
-  modules/auth/
-    auth.routes.ts            Auth validation, routes and handlers together
-    auth.session.ts           Shared session and CSRF configuration
-    user.model.ts             User schema and password hashing
-  modules/weddings/
-    wedding.models.ts          Family and Wedding models
-    wedding.routes.ts          Setup, dashboard, edits and public projection
-    team.routes.ts             Role invites, atomic acceptance and membership access
-    wedding.test.ts            Isolated end-to-end API and RBAC checks
-  modules/invitations/
-    invitation.model.ts        Wedding-scoped guests and saved email attempts
-    invitation.routes.ts       Guest edits, preview, send claims and safe retry
-    invitation.email.tsx       React Email template, plain text and Resend SDK
-    invitation.test.ts         Isolated MongoDB and stub-provider integration tests
-  config/                      Environment, MongoDB connection and indexes
-  middleware/error-handler.ts  Shared HTTP error helper and error responses
+  app.ts               API registration and production frontend serving
+  main.ts              Startup and shutdown
+  config/              Environment, MongoDB, storage, logging and realtime
+  middleware/          HTTP errors and wedding access checks
+  modules/             Auth, weddings, planning, finance, invitations,
+                       media, providers, site and integrations
+  scripts/             Production configuration and media cleanup commands
 ```
 
-Small route handlers use Mongoose directly. Page-specific form logic stays with its page; genuinely shared pieces such as the wedding form, brand, icons and Axios client remain separate. No extra service/repository layer or global React context is required.
+To follow a request, start with a page’s TanStack Query query/mutation, then its Axios call in `web/src/lib`, then the matching Express route. Small handlers use Mongoose directly. Shared forms, permission rules, serialization and send/concurrency safeguards stay shared where consistency matters.
 
-To follow a request, start at the page's TanStack Query mutation/query, then the matching feature file in `web/src/lib`, then its Express route. Inside the route, `schema.parse(req.body)` validates input, the Mongoose query includes wedding membership/ownership, and `res.json({ data: ... })` sends the response. Zod validation errors become HTTP 422 in the shared error handler. Authentication and role checks run before private operations. There are no custom query or validation wrappers to follow.
+## Check and build
 
-Standard formats use Zod's built-in date/time/hex/URL validators and Mongoose's ID validator. Phone checks use `libphonenumber-js` with India as the default country; formatted Indian and explicit international numbers are accepted when their length is possible for that country. This is format checking, not phone verification. Short/non-phone strings previously accepted by the basic regex are rejected on new saves. Paired coordinates, the HTTPS YouTube host allowlist and subject line-break restrictions remain explicit product rules.
-
-`invitation.email.tsx` contains both the readable JSX email and the Resend send call. React escapes inserted text; `@react-email/render` produces the HTML and plain-text alternative. The Resend SDK handles provider requests and typed responses. App-owned version checks, persisted send claims, idempotency keys and uncertain-result handling remain in `invitation.routes.ts`. Previously saved invitation payloads are reused unchanged on retries. No API key or email provider SDK is sent to the frontend.
-
-Wedding, team and guest route handlers show their database queries directly. `workspaceData` only formats the shared response; it performs no I/O. Create/edit responses reuse returned Mongoose documents, with membership/version conditions and unique indexes retained. Shared role rules, guest-safe field selection, invitation leases and retry/idempotency rules remain where consistency matters. Team member lookup uses a map rather than repeatedly scanning the user list. Guest search uses `escape-string-regexp` so typed search text is treated literally.
-
-Frontend endpoint functions use explicit Axios requests and return `response.data.data`. All writes use one `getCsrfHeaders` helper from `lib/api.ts`; it fetches a fresh token for the current session. Common API error messages also live there. Setup-only header/diagram markup stays in `SetupPage`; the shared login/signup story lives directly at `features/auth/LoginStory.tsx`. Stateful form/editor boundaries remain separate where keys and hooks protect unsaved input.
-
-Only active source folders are kept. Future feature modules, integrations, jobs and realtime folders will be created when their implementation starts.
-
-## Verification
-
-```bash
+```sh
 npm run check
+npm run test:production
+npx playwright install chromium
+npm run test:e2e
 ```
 
-Runs type checks, backend/API and Axios client tests, and both builds. Integration tests use disposable MongoDB instances, never Atlas; their MongoDB binary downloads on first use. Email tests inject a stub provider and never send actual emails. Tests cover setup, ownership, public-field filtering, role enforcement, stale/concurrent edits and sends, CSRF, session/proxy behavior, provider failures and uncertain retry recovery.
+`check` runs both TypeScript checks, backend/frontend tests and production builds. API and browser tests use disposable MongoDB instances and stub email providers, not Atlas or real mail. The MongoDB binary downloads on the first test run. If using an installed Chrome browser, run `PLAYWRIGHT_CHROME_CHANNEL=chrome npm run test:e2e`.
 
-`npm start` runs compiled Express after building. Serving the frontend bundle through Express and AWS deployment remain future work. Current IP rate limits are per-process; shared limiting is needed before multiple server instances.
+After building, `npm start` serves the app through Express. Read [Production release](docs/Production-Release.md) for AWS deployment, HTTPS/proxy configuration, health checks, support/policy settings and rollback. Deployment still requires infrastructure configuration. Current rate limits are per process; use a shared limiter before running multiple instances.
 
-See [the setup/API flow diagram](docs/Wedding-Setup-Flow.md) and [Stitch design reference](docs/designs/stitch-reference.md).
+## Further documentation
+
+- [Product requirements](docs/Make-My-Marriage-PRD.md)
+- [System design](docs/Make-My-Marriage-System-Design2.md)
+- [API design](docs/Make-My-Marriage-API-Design.md)
+- [Wedding setup flow](docs/Wedding-Setup-Flow.md)
+- [Design rules](design.md) and [UI reference](docs/designs/hallmark-redesign.md)
+
+The V1 configuration and production guides describe the implemented behavior where an earlier design proposal differs.

@@ -41,3 +41,10 @@ The dashboard retains the original Stitch sidebar/header and all section navigat
 `web/public/images/stitch/ceremony-1.jpg` is retained only as a decorative login photograph. It is not represented as the current user's wedding photograph.
 
 `category-*.jpg` files are illustrations from the Find Services reference, used for service categories. They do not represent actual vendors. Google Maps links use the current wedding's location; the in-app directory awaits its backend integration.
+
+## Working coordination screens — 3 November 2026
+
+- Functions refinement: `162ed4777b0e406cabc3b98e03ed9c44`.
+- Teams & Services — Family Coordination V1: `261ae81d485741768f12c2b0a34bae87`.
+
+These were generated through Stitch for the working planning batch. The implementation keeps Newsreader/Manrope/Devanagari, forest/ivory/sage, a chronological function timeline, operational summary cards and a department side sheet. Separate attention navigation groups manual/stale/overdue reasons. Prototype names, vendor records, metrics, language controls and unsupported actions are not inserted into user accounts. Function start/end times are required for additional functions, and overlap checks cover the whole wedding rather than only a venue. Initial new-screen generation hit a transport failure; the successful reference screens above were produced using Stitch screen refinements.

@@ -122,6 +122,21 @@ function render(role: WeddingRole, route: string, layoutOnly = false) {
   const client = new QueryClient();
   const data: Workspace = { family, wedding, role };
   client.setQueryData(["wedding-dashboard", user.id], data);
+  client.setQueryData(["finance", user.id], {
+    version: 0,
+    currency: "INR",
+    budgetPaise: null,
+    totals: {
+      agreedPaise: 0,
+      paidPaise: 0,
+      pendingPaise: 0,
+      creditPaise: 0,
+      budgetRemainingPaise: null,
+    },
+    departments: [],
+    expenses: [],
+    audit: [],
+  });
   const content = layoutOnly
     ? h(DashboardLayout, {
         user,

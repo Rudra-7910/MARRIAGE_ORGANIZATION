@@ -310,7 +310,8 @@ test(
         for (const client of [owner, admin, organizer]) {
           const response = await request(client, root + "/budget");
           assert.equal(response.status, 200);
-          assert.equal(response.body.data.available, false);
+          assert.equal(response.body.data.currency, "INR");
+          assert.deepEqual(response.body.data.expenses, []);
           assert.equal((await request(client, root + "/guests")).status, 200);
         }
         for (const role of ["Admin", "Organizer", "Manager"])

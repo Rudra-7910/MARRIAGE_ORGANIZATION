@@ -14,6 +14,8 @@ test(
     process.env.SESSION_SECRET =
       "isolated-production-proxy-test-secret-at-least-32-characters";
     process.env.APP_ORIGIN = "https://wedding.example";
+    process.env.LINK_SECRET =
+      "isolated-production-links-secret-at-least-32-characters";
     process.env.TRUST_PROXY_CIDRS = "127.0.0.1/32";
     const { connectDatabase, disconnectDatabase } =
       await import("../../config/database.js");

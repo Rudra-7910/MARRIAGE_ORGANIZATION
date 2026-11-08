@@ -3,9 +3,10 @@ import mongoose from "mongoose";
 import { z } from "zod";
 import { isPossiblePhoneNumber } from "libphonenumber-js";
 import { Family, Wedding, canOrganize, roleFor } from "./wedding.models.js";
-import { User } from "../auth/user.model.js";
+import { requireUser } from "../../middleware/wedding-access.js";
 import { createSessionMiddleware, checkCsrf } from "../auth/auth.session.js";
 import { httpError } from "../../middleware/error-handler.js";
+import { hasScheduleConflict } from "../planning/planning.schema.js";
 
 const familyInput = z
   .object({
@@ -27,6 +28,7 @@ const weddingInput = z
     venue: z.string().trim().min(2).max(160),
     address: z.string().trim().min(5).max(500),
     city: z.string().trim().min(2).max(100),
+    googlePlaceId: z.string().trim().max(300).default(""),
     latitude: z.number().min(-90).max(90).nullable(),
     longitude: z.number().min(-180).max(180).nullable(),
     contactRole: z.string().trim().min(2).max(100),
@@ -73,6 +75,7 @@ function details(wedding: InstanceType<typeof Wedding>) {
     venue: wedding.venue,
     address: wedding.address,
     city: wedding.city,
+    googlePlaceId: wedding.googlePlaceId,
     latitude: wedding.latitude,
     longitude: wedding.longitude,
     contactRole: wedding.contactRole,
@@ -117,16 +120,27 @@ export function createWeddingRouter() {
     res.json({ data: details(wedding) });
   });
 
-  const privatePaths = ["/setup", "/dashboard", "/families", "/weddings"];
-  router.use(privatePaths, createSessionMiddleware());
-  router.use(privatePaths, async (req, _res, next) => {
-    if (
-      !req.session.userId ||
-      !(await User.exists({ _id: req.session.userId }))
-    )
-      throw httpError(401, "UNAUTHENTICATED", "Please log in to continue.");
-    next();
+  router.get("/public/weddings/:publicId/functions", async (req, res) => {
+    const wedding = await Wedding.findOne({ publicId: req.params.publicId });
+    if (!wedding)
+      throw httpError(404, "WEDDING_NOT_FOUND", "Wedding website not found.");
+    const functions = (wedding.planning?.functions || [])
+      .filter((item) => item.guestVisible)
+      .map((item) => ({
+        id: item._id.toString(),
+        name: item.name,
+        startsAt: item.startsAt,
+        endsAt: item.endsAt,
+        venue: item.venue,
+        address: item.address,
+        city: item.city,
+      }))
+      .sort((a, b) => a.startsAt.localeCompare(b.startsAt));
+    res.json({ data: functions });
   });
+
+  const privatePaths = ["/setup", "/dashboard", "/families", "/weddings"];
+  router.use(privatePaths, createSessionMiddleware(), requireUser);
 
   router.get("/setup", async (req, res) => {
     const userId = req.session.userId!;
@@ -247,10 +261,20 @@ export function createWeddingRouter() {
     const { version, ...values } = weddingInput
       .safeExtend({ version: z.number().int().min(0) })
       .parse(req.body);
+    if (hasScheduleConflict(values, wedding.planning?.functions || []))
+      throw httpError(
+        422,
+        "FUNCTION_OVERLAP",
+        "The ceremony timing overlaps a saved function. Update that function first.",
+      );
     const updated = await Wedding.findOneAndUpdate(
       {
         _id: wedding._id,
         __v: version,
+        "planning.version":
+          wedding.planning?.version === 0
+            ? { $in: [0, null] }
+            : wedding.planning?.version,
         members: {
           $elemMatch: {
             userId: req.session.userId,

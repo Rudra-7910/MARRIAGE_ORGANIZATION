@@ -2,6 +2,7 @@ import { render, toPlainText } from "@react-email/render";
 import { parsePhoneNumberFromString } from "libphonenumber-js";
 import { Resend } from "resend";
 import { z } from "zod";
+import { accessToken } from "../site/access-token.js";
 import { env } from "../../config/env.js";
 import type { Wedding } from "../weddings/wedding.models.js";
 
@@ -36,7 +37,7 @@ export function invitationDefaults(wedding: InstanceType<typeof Wedding>) {
 // Keep the table layout and inline styles that email clients require.
 export async function renderInvitation(
   wedding: InstanceType<typeof Wedding>,
-  guest: { name: string },
+  guest: { name: string; id?: string; accessNonce?: string | null },
   subject: string,
   message: string,
 ) {
@@ -57,8 +58,17 @@ export async function renderInvitation(
       : wedding.address + ", " + wedding.city;
   const maps =
     "https://www.google.com/maps/dir/?api=1&destination=" +
-    encodeURIComponent(destination);
-  const website = env.appOrigin + "/w/" + encodeURIComponent(wedding.publicId);
+    encodeURIComponent(destination) +
+    (wedding.googlePlaceId
+      ? "&destination_place_id=" + encodeURIComponent(wedding.googlePlaceId)
+      : "");
+  const website =
+    env.appOrigin +
+    "/w/" +
+    encodeURIComponent(wedding.publicId) +
+    (guest.id && guest.accessNonce
+      ? "#invite=" + accessToken("guest", guest.id, guest.accessNonce)
+      : "");
   const phone = parsePhoneNumberFromString(wedding.phone, "IN");
   // Older saved numbers may predate phone validation.
   const phoneLink = phone

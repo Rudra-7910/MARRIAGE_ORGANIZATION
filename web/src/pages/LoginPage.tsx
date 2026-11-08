@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { login } from "../lib/api";
+import { accountPathFromState, login } from "../lib/api";
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { inviteTokenFromState } from "../lib/team";
@@ -30,6 +30,7 @@ export function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const teamInviteToken = inviteTokenFromState(location.state);
+  const returnTo = accountPathFromState(location.state);
   const queryClient = useQueryClient();
   const mutation = useMutation({
     mutationFn: login,
@@ -37,7 +38,7 @@ export function LoginPage() {
       queryClient.clear();
       queryClient.setQueryData(["auth-user"], user);
       navigate(
-        teamInviteToken ? "/team-invites#" + teamInviteToken : "/app/setup",
+        teamInviteToken ? "/team-invites#" + teamInviteToken : returnTo,
         { replace: true },
       );
     },
@@ -64,27 +65,15 @@ export function LoginPage() {
             Back to home
           </Link>
           <Brand />
-          <span className="login-header-note">
-            <Icon name="spark" />A LITTLE MORE TOGETHER.
-          </span>
         </div>
       </header>
 
       <main id="login-main" className="login-main page-container">
         <div className="login-card">
           <section className="login-form-panel" aria-labelledby="login-heading">
-            <span className="eyebrow">
-              YOUR PEOPLE. YOUR PLANS. YOUR FOREVER.
-            </span>
-            <h1 id="login-heading">
-              Back to your
-              <br />
-              <em>beautiful beginning.</em>
-            </h1>
+            <h1 id="login-heading">Welcome back.</h1>
             <p className="login-intro">
-              A little less planning. A little more together.
-              <br className="desktop-break" /> Your wedding plans are right
-              where you left them.
+              Log in to manage your wedding plans.
             </p>
             <form
               className="login-form"
@@ -170,6 +159,9 @@ export function LoginPage() {
                 )}
               </div>
 
+              <Link className="recovery-link" to="/forgot-password">
+                Forgot your password?
+              </Link>
               <button
                 type="submit"
                 disabled={mutation.isPending}
@@ -184,15 +176,12 @@ export function LoginPage() {
                   {mutation.error.message}
                 </p>
               )}
-              <p className="login-session-note">
-                Your login uses a secure, HTTP-only session cookie.
-              </p>
             </form>
             <div className="login-create-account">
               <span>New to Make My Marriage?</span>
               <Link
                 to="/signup"
-                state={teamInviteToken ? { teamInviteToken } : undefined}
+                state={teamInviteToken ? { teamInviteToken } : { returnTo }}
               >
                 Create an account
                 <Icon name="arrow" />
@@ -201,10 +190,6 @@ export function LoginPage() {
           </section>
           <LoginStory />
         </div>
-        <p className="login-below-card">
-          <Icon name="spark" />
-          The beautiful chaos is better when you’re in it together.
-        </p>
       </main>
 
       <footer className="login-footer">

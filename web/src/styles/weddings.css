@@ -1,394 +1,367 @@
-/* Shared form and wedding workspace components. */
 .ws-button {
   display: inline-flex;
+  min-height: 44px;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  border: 1px solid #dddccc;
-  padding: 11px 16px;
-  border-radius: 8px;
-  background: #fffdf8;
-  color: #3e593f;
-  font-size: 12px;
+  gap: var(--space-xs);
+  border: 1px solid var(--color-rule);
+  padding: var(--space-xs) var(--space-md);
+  border-radius: var(--radius-control);
+  background: var(--color-white);
+  color: var(--color-ink);
+  font-size: 14px;
   font-weight: 600;
-  cursor: pointer;
   line-height: 1.5;
+  cursor: pointer;
+  transition:
+    background-color var(--dur-micro) ease,
+    border-color var(--dur-micro) ease,
+    transform var(--dur-micro) ease;
 }
 .ws-button:hover {
-  background: #f2f3e9;
+  background: var(--color-paper-2);
+  border-color: var(--color-muted);
+}
+.ws-button:active {
+  transform: translateY(1px);
 }
 .ws-button:disabled {
-  opacity: 0.5;
-  cursor: wait;
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+.ws-button:focus-visible,
+.ws-text-link:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 3px;
 }
 .ws-primary {
-  background: #285447;
-  color: #fffdf3;
-  border-color: #285447;
+  background: var(--color-accent);
+  color: var(--color-accent-ink);
+  border-color: var(--color-accent);
 }
 .ws-primary:hover {
-  background: #1e4035;
+  background: var(--color-forest-dark);
+  border-color: var(--color-forest-dark);
 }
 .ws-text-link {
   display: inline-flex;
+  min-height: 44px;
   align-items: center;
-  gap: 7px;
-  font-size: 12px;
-  color: #35644b;
+  gap: var(--space-xs);
+  color: var(--color-accent);
+  background: var(--color-clear);
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
 }
-.ws-eyebrow {
-  display: block;
-  color: #a37875;
-  font-size: 9px;
-  letter-spacing: 1.6px;
-  font-weight: 700;
-}
-.ws-page-heading {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 20px;
-  margin-bottom: 26px;
-}
-.ws-page-heading h1 {
-  font-family: Newsreader, Georgia, serif;
-  font-size: 34px;
-  line-height: 1.2;
-  margin: 12px 0;
-}
-.ws-page-heading p {
-  color: #7d856f;
-  font-size: 12px;
-  line-height: 1.8;
+.ws-text-link:hover {
+  text-decoration: underline;
+  text-underline-offset: 4px;
 }
 .ws-panel {
-  background: #fffdf9;
-  border: 1px solid #e6e0d4;
-  border-radius: 11px;
-  overflow: hidden;
-  margin-bottom: 22px;
   min-width: 0;
+  overflow: clip;
+  background: var(--color-white);
+  border: 1px solid var(--color-rule);
+  border-radius: var(--radius-card);
+  margin-bottom: var(--space-lg);
 }
 .ws-panel-heading {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  gap: 15px;
-  padding: 19px 23px;
-  border-bottom: 1px solid #eee9df;
+  justify-content: space-between;
+  gap: var(--space-md);
+  padding: var(--space-lg) var(--space-lg);
+  border-bottom: 1px solid var(--color-rule);
 }
 .ws-panel-heading h2 {
-  font-size: 14px;
-  font-weight: 600;
+  font-size: 16px;
+  font-weight: 650;
 }
 .ws-settings-fields {
-  padding: 23px;
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: var(--space-lg);
+  padding: var(--space-lg);
 }
 .ws-field-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 19px;
+  gap: var(--space-lg);
 }
 .ws-form {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: var(--space-5);
 }
 .ws-form label {
   display: flex;
-  flex-direction: column;
-  gap: 9px;
-  font-size: 12px;
-  color: #485f40;
-  font-weight: 600;
   min-width: 0;
+  flex-direction: column;
+  gap: var(--space-xs);
+  color: var(--color-ink-2);
+  font-size: 14px;
+  font-weight: 600;
 }
 .ws-form input,
 .ws-form textarea,
 .ws-form select {
   width: 100%;
   min-width: 0;
-  padding: 12px;
-  border: 1px solid #dfdfd1;
-  border-radius: 7px;
-  background: #fffefa;
-  color: #2a3c2d;
-  font-size: 13px;
+  min-height: 48px;
+  padding: var(--space-sm) var(--space-sm);
+  border: 1px solid var(--color-muted);
+  border-radius: var(--radius-control);
+  background: var(--color-white);
+  color: var(--color-ink);
+  font-size: 16px;
   font-weight: 400;
 }
+.ws-form input::placeholder,
+.ws-form textarea::placeholder {
+  color: var(--color-muted);
+}
+.ws-form :is(input, textarea, select):focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: -3px;
+}
+.ws-form :is(input, textarea, select):disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  background: var(--color-paper-2);
+}
+.ws-form :is(input, textarea, select)[aria-invalid="true"] {
+  border-color: var(--color-danger);
+}
 .ws-form textarea {
-  min-height: 90px;
+  min-height: 100px;
   resize: vertical;
 }
 .ws-form-actions {
   display: flex;
-  justify-content: flex-end;
-  gap: 12px;
   align-items: center;
+  justify-content: flex-end;
   flex-wrap: wrap;
-  padding-top: 18px;
-  border-top: 1px solid #e8e2d6;
+  gap: var(--space-md);
+  padding-top: var(--space-lg);
+  border-top: 1px solid var(--color-rule);
 }
 .ws-form-error {
-  font-size: 12px;
-  line-height: 1.8;
-  color: #a14d4b;
-  padding: 13px 16px;
-  border-radius: 7px;
-  background: #f9eae3;
+  padding: var(--space-md) var(--space-md);
+  border-radius: var(--radius-control);
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+  font-size: 14px;
+  line-height: 1.75;
 }
 .ws-form-error button {
-  margin: 10px;
+  margin: var(--space-xs);
 }
 .ws-help {
-  color: #7a876e;
-  font-size: 11px;
-  line-height: 1.8;
+  color: var(--color-muted);
+  font-size: 13px;
+  line-height: 1.75;
 }
 .ws-empty {
-  min-height: 45vh;
   display: flex;
+  min-height: 45vh;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 20px;
+  gap: var(--space-5);
+  padding: var(--space-12) var(--space-lg);
   text-align: center;
-  padding: 40px 24px;
-  color: #718565;
+  color: var(--color-muted);
 }
 .ws-empty h1 {
-  font-family: Newsreader, serif;
-  font-size: 34px;
-}
-.ws-panel-link {
-  display: flex;
-  justify-content: center;
-  padding: 16px;
-  border-top: 1px solid #e9e5d8;
-  font-size: 12px;
-  color: #406744;
-}
-.ws-nav-item {
-  display: block;
-  border-radius: 7px;
-  padding: 12px 14px;
-  font-size: 12px;
-  color: #6b7b60;
-  margin-bottom: 5px;
-}
-.ws-nav-item:hover {
-  background: #f1f3e9;
+  font: var(--display-weight) 36px/1.15 var(--font-display);
+  color: var(--color-ink);
+  overflow-wrap: break-word;
+  min-width: 0;
+  text-wrap: balance;
 }
 .ws-video {
   display: block;
   width: 100%;
   border: 0;
-  aspect-ratio: 16/9;
-  border-radius: 10px;
-}
-.login-create-account a {
-  display: inline-flex;
-  gap: 7px;
-  align-items: center;
-  color: #285447;
-  font-size: 12px;
-  font-weight: 700;
-}
-.login-submit:disabled {
-  opacity: 0.6;
-  cursor: wait;
-}
-:where(.setup-page) :focus-visible {
-  outline: 2px solid #537e5a;
-  outline-offset: 3px;
-}
-@media (max-width: 700px) {
-  .ws-field-grid {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .ws-page-heading {
-    flex-wrap: wrap;
-  }
-  .ws-panel-heading {
-    padding: 18px;
-  }
-  .ws-settings-fields {
-    padding: 19px;
-  }
+  aspect-ratio: 16 / 9;
+  border-radius: var(--radius-card);
 }
 .setup-page {
-  min-height: 100vh;
-  background: #fbf7f3;
-  color: #293b30;
+  min-height: 100dvh;
+  background: var(--color-paper);
+  color: var(--color-ink);
 }
 .setup-header {
-  min-height: 82px;
   display: flex;
+  min-height: 88px;
   align-items: center;
   justify-content: space-between;
-  gap: 20px;
-  padding: 18px max(24px, calc((100vw - 1160px) / 2));
-  background: #fffdf9;
-  border-bottom: 1px solid #e8dfd4;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+  max-width: var(--container);
+  margin-inline: auto;
+  padding: var(--space-md) var(--space-xl);
+  border-bottom: 1px solid var(--color-rule);
 }
 .setup-header > div {
   display: flex;
-  gap: 24px;
   align-items: center;
-  font-size: 12px;
+  gap: var(--space-lg);
+  font-size: 14px;
 }
 .setup-main {
-  max-width: 1160px;
-  padding: 48px 24px 70px;
-  margin: auto;
+  max-width: 1200px;
+  margin-inline: auto;
+  padding: var(--space-14) var(--space-xl) 88px;
 }
 .setup-intro {
-  margin-bottom: 32px;
+  margin-bottom: var(--space-xl);
+  max-width: 700px;
 }
 .setup-intro h1 {
-  font-family: Newsreader, Georgia, serif;
-  font-size: 52px;
-  line-height: 1.04;
-  margin: 12px 0 18px;
-}
-.setup-intro h1 em {
-  color: #a27478;
+  margin-bottom: var(--space-md);
+  font: var(--display-weight) 52px/1.08 var(--font-display);
+  letter-spacing: var(--tracking-display);
+  overflow-wrap: break-word;
+  min-width: 0;
+  text-wrap: balance;
 }
 .setup-intro > p {
-  font-size: 13px;
-  color: #75806d;
+  color: var(--color-muted);
+  font-size: 16px;
+  line-height: 1.8;
 }
 .setup-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 320px;
-  gap: 32px;
+  grid-template-columns: minmax(0, 1fr) 270px;
   align-items: start;
+  gap: var(--space-12);
 }
 .setup-steps {
   display: flex;
-  gap: 24px;
-  border-bottom: 1px solid #e6ded1;
-  margin-bottom: 24px;
-  font-size: 12px;
-  color: #929584;
+  gap: var(--space-8);
+  margin-bottom: var(--space-7);
+  border-bottom: 1px solid var(--color-rule);
+  color: var(--color-muted);
+  font-size: 14px;
 }
 .setup-steps li {
-  padding: 12px 0;
-  border-bottom: 2px solid transparent;
+  padding: var(--space-sm) 0 var(--space-md);
+  border-bottom: 2px solid var(--color-clear);
 }
 .setup-steps .is-active {
-  border-color: #285447;
-  color: #285447;
+  border-color: var(--color-accent);
+  color: var(--color-accent);
   font-weight: 700;
 }
 .setup-steps .is-complete {
-  color: #6b845c;
+  color: var(--color-accent);
 }
 .setup-story {
   position: sticky;
-  top: 28px;
-  padding: 32px 27px;
-  background: #f0f1e8;
-  border: 1px solid #e0e3d5;
-  border-radius: 14px;
+  top: 32px;
+  padding: var(--space-lg) 0 var(--space-lg) var(--space-7);
+  border-left: 1px solid var(--color-rule);
 }
 .setup-story h2 {
-  font-family: Newsreader, Georgia, serif;
-  font-size: 31px;
-  line-height: 1.2;
-  margin: 12px 0 30px;
-}
-.setup-story h2 em {
-  color: #946c6e;
+  margin-bottom: var(--space-7);
+  font: var(--display-weight) 30px/1.15 var(--font-display);
+  overflow-wrap: break-word;
+  min-width: 0;
+  text-wrap: balance;
 }
 .setup-story ol {
   display: flex;
   flex-direction: column;
-  gap: 26px;
+  gap: var(--space-lg);
 }
 .setup-story li {
   display: flex;
-  align-items: flex-start;
-  gap: 13px;
   position: relative;
-}
-.setup-story li:not(:last-child)::after {
-  content: "";
-  position: absolute;
-  top: 32px;
-  bottom: -23px;
-  left: 15px;
-  width: 1px;
-  background: #cbd5c1;
+  align-items: flex-start;
+  gap: var(--space-sm);
 }
 .setup-story li > span {
   display: grid;
-  place-items: center;
-  width: 31px;
-  height: 31px;
   flex-shrink: 0;
-  background: #e0e8d7;
-  border: 1px solid #cbd6c2;
-  border-radius: 50%;
-  color: #3d6248;
-  font-size: 12px;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border-radius: var(--radius-pill);
+  background: var(--color-sage);
+  color: var(--color-accent);
+  font-size: 13px;
 }
 .setup-story strong {
-  font-size: 12px;
+  font-size: 14px;
+  font-weight: 650;
 }
 .setup-story li p {
-  font-size: 11px;
+  margin-top: var(--space-2xs);
+  color: var(--color-muted);
+  font-size: 13px;
   line-height: 1.7;
-  color: #76816d;
-  margin-top: 6px;
 }
 .setup-reassurance {
-  font-family: Newsreader, serif;
-  font-size: 20px;
-  line-height: 1.6;
-  color: #7d7370;
-  border-top: 1px solid #dce0d1;
-  padding-top: 24px;
-  margin-top: 30px;
+  margin-top: var(--space-7);
+  padding-top: var(--space-lg);
+  border-top: 1px solid var(--color-rule);
+  color: var(--color-muted);
+  font-size: 14px;
+  line-height: 1.8;
 }
 .setup-family-summary {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 12px;
-  background: #f3efe5;
-  border: 1px solid #e3dccb;
-  border-radius: 9px;
-  padding: 18px 22px;
-  margin-bottom: 24px;
-  font-size: 12px;
+  flex-wrap: wrap;
+  gap: var(--space-xs) var(--space-md);
+  padding: var(--space-md) 0;
+  margin-bottom: var(--space-lg);
+  border-bottom: 1px solid var(--color-rule);
+  font-size: 14px;
+}
+.setup-family-summary strong {
+  color: var(--color-ink);
+  font-weight: 650;
+}
+.setup-family-summary span {
+  color: var(--color-muted);
 }
 .setup-family-summary small {
   width: 100%;
-  color: #7c8373;
-  font-size: 10px;
+  color: var(--color-muted);
+  font-size: 13px;
 }
 .wedding-form fieldset {
-  border: 0;
-  padding: 0;
-  margin: 0;
   min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
 }
 .wedding-form .ws-panel {
-  margin-bottom: 22px;
+  display: grid;
+  grid-template-columns: 155px minmax(0, 1fr);
+  margin-bottom: var(--space-lg);
+}
+.wedding-form .ws-panel-heading {
+  flex-direction: column-reverse;
+  align-items: flex-start;
+  justify-content: flex-end;
+  gap: var(--space-xs);
+  padding: var(--space-lg) var(--space-md) var(--space-lg) var(--space-lg);
+  border: 0;
+}
+.wedding-form .ws-panel-heading h2 {
+  font-size: 16px;
+  line-height: 1.5;
 }
 .wedding-form label {
-  margin-top: 0 !important;
+  margin-top: 0;
 }
 .wedding-form .ws-settings-fields {
-  display: flex;
-  flex-direction: column;
-  gap: 19px;
+  gap: var(--space-lg);
 }
 .wedding-form .ws-settings-fields.ws-field-grid {
   display: grid;
@@ -397,123 +370,94 @@
   align-items: start;
 }
 .wedding-form label small {
-  color: #839079;
-  font-size: 10px;
+  color: var(--color-muted);
+  font-size: 12px;
+  line-height: 1.7;
   font-weight: 400;
 }
 .setup-section-number {
-  color: #a7927e;
-  font-size: 11px;
+  color: var(--color-muted);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
 }
 .wedding-form .ws-form-actions {
   justify-content: space-between;
   align-items: center;
 }
+.wedding-form .ws-form-actions .ws-help {
+  max-width: 380px;
+}
 .wedding-form .ws-form-error {
-  margin-bottom: 20px;
+  margin-bottom: var(--space-5);
 }
 .wedding-details {
-  padding: 10px 23px;
+  padding: var(--space-xs) var(--space-lg);
 }
 .wedding-details > div {
   display: grid;
   grid-template-columns: 120px minmax(0, 1fr);
-  gap: 20px;
-  padding: 14px 0;
-  border-bottom: 1px solid #efede5;
-  font-size: 12px;
+  gap: var(--space-lg);
+  padding-block: var(--space-md);
+  border-bottom: 1px solid var(--color-rule);
+  font-size: 14px;
+  line-height: 1.7;
+}
+.wedding-details > div:last-child {
+  border: 0;
 }
 .wedding-details dt {
-  color: #7c8472;
+  color: var(--color-muted);
 }
 .wedding-details dd {
-  color: #3d5036;
+  color: var(--color-ink);
   overflow-wrap: anywhere;
 }
 .guest-link-label {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  font-size: 11px;
-  color: #78836c;
-  margin: 22px 0;
+  gap: var(--space-xs);
+  margin-block: var(--space-lg);
+  color: var(--color-muted);
+  font-size: 14px;
 }
 .guest-link-label input {
   width: 100%;
-  border: 1px solid #e0dfd1;
-  border-radius: 6px;
-  padding: 12px;
-  color: #44633e;
-  background: #fafbf6;
-  font-size: 11px;
+  min-height: 48px;
+  border: 1px solid var(--color-muted);
+  border-radius: var(--radius-control);
+  padding: var(--space-sm);
+  color: var(--color-ink);
+  background: var(--color-paper);
+  font-size: 14px;
 }
-@media (max-width: 900px) {
-  .setup-grid {
-    grid-template-columns: minmax(0, 1fr) 270px;
-    gap: 22px;
-  }
-  .setup-story {
-    padding: 25px 20px;
-  }
+.guest-link-label input:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: -3px;
 }
-@media (max-width: 700px) {
-  .setup-header {
-    padding: 18px;
-    flex-wrap: wrap;
-  }
-  .setup-header .brand-name {
-    font-size: 13px;
-  }
-  .setup-header .brand-caption {
-    display: none;
-  }
-  .setup-header > div {
-    gap: 14px;
-    font-size: 11px;
-  }
-  .setup-main {
-    padding: 32px 18px;
-  }
-  .setup-intro h1 {
-    font-size: 42px;
-  }
-  .setup-grid {
-    grid-template-columns: 1fr;
-  }
-  .setup-story {
-    position: static;
-  }
-  .wedding-details > div {
-    grid-template-columns: 90px minmax(0, 1fr);
-    gap: 12px;
-  }
-}
-
-/* Wedding team invitation and access management. */
 .team-page > .dash-card {
-  margin-bottom: 24px;
-  padding: 24px;
+  margin-bottom: var(--space-lg);
+  padding: var(--space-lg);
 }
 .team-page .dash-card-heading {
-  margin-bottom: 18px;
-  padding: 0 0 16px;
+  margin-bottom: var(--space-md);
+  padding: 0 0 var(--space-md);
 }
 .team-page .dash-badge {
-  font-size: 11px;
+  font-size: 12px;
 }
 .team-note {
-  color: #64715f;
+  color: var(--color-muted);
   font-size: 13px;
-  line-height: 1.9;
-  margin-block: 12px;
+  line-height: 1.85;
+  margin-block: var(--space-md);
 }
 .team-member {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 14px;
-  padding-block: 18px;
-  border-top: 1px solid #e4e7da;
+  gap: var(--space-md);
+  padding-block: var(--space-5);
+  border-top: 1px solid var(--color-rule);
 }
 .team-member-name {
   flex: 1;
@@ -521,14 +465,15 @@
   overflow-wrap: anywhere;
 }
 .team-member-name strong {
-  font-size: 14px;
-  color: #285447;
+  color: var(--color-ink);
+  font-size: 15px;
+  font-weight: 650;
 }
 .team-member-name p,
 .team-member-name small {
-  font-size: 12px;
-  color: #67735e;
-  line-height: 1.8;
+  color: var(--color-muted);
+  font-size: 13px;
+  line-height: 1.85;
 }
 .team-member-name small {
   display: block;
@@ -540,28 +485,33 @@
   display: flex;
   align-items: flex-end;
   flex-wrap: wrap;
-  gap: 16px;
-  margin-top: 18px;
+  gap: var(--space-md);
+  margin-top: var(--space-5);
 }
 .team-invite-form label,
 .team-created-link label {
   display: block;
-  color: #36543d;
-  font-size: 13px;
+  color: var(--color-ink);
+  font-size: 14px;
   font-weight: 600;
 }
 .team-invite-form select,
 .team-created-link input {
   display: block;
   width: 100%;
-  min-height: 44px;
-  padding: 10px 12px;
-  margin-top: 8px;
-  border: 1px solid #cdd8c3;
-  border-radius: 8px;
-  background: #fffefa;
-  color: #285447;
+  min-height: 48px;
+  padding: var(--space-sm) var(--space-sm);
+  margin-top: var(--space-xs);
+  border: 1px solid var(--color-muted);
+  border-radius: var(--radius-control);
+  background: var(--color-white);
+  color: var(--color-ink);
   font: inherit;
+}
+.team-invite-form select:focus-visible,
+.team-created-link input:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: -3px;
 }
 .team-invite-form label {
   flex: 1;
@@ -570,93 +520,185 @@
 }
 .team-created-link,
 .team-confirm {
-  padding: 20px;
-  margin-top: 18px;
-  border: 1px solid #d7dfc8;
-  border-radius: 10px;
-  background: #f3f5e9;
-  line-height: 1.9;
-  font-size: 13px;
+  padding: var(--space-5) 0;
+  margin-top: var(--space-5);
+  border-block: 1px solid var(--color-rule);
+  font-size: 14px;
+  line-height: 1.8;
   overflow-wrap: anywhere;
 }
 .team-created-link > p {
-  margin-block: 8px 14px;
-  color: #627057;
+  margin-block: var(--space-xs) var(--space-md);
+  color: var(--color-muted);
 }
 .team-created-link .ws-button {
-  margin-top: 14px;
+  margin-top: var(--space-md);
 }
 .team-confirm {
   flex-basis: 100%;
   margin-top: 0;
-  background: #fff2e6;
-  border-color: #e5c6b1;
 }
 .team-confirm .ws-button {
-  margin: 10px 8px 0 0;
+  margin: var(--space-xs) var(--space-xs) 0 0;
 }
 .team-page .team-role-grid {
   grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
 }
 .team-invite-page {
-  min-height: 100vh;
+  min-height: 100dvh;
+}
+.team-invite-page .login-header-inner {
+  display: flex;
+  justify-content: space-between;
+}
+.team-invite-page .login-header-inner > a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--color-muted);
+  font-size: 14px;
 }
 .team-invite-card {
-  width: min(640px, calc(100% - 40px));
-  margin: 60px auto;
-  padding: 38px;
-  border: 1px solid #dccaab;
-  border-top: 4px solid #b68e51;
-  border-radius: 16px;
-  background: #fffdf5;
-  box-shadow: 0 12px 40px #33482b08;
+  width: min(620px, calc(100% - 40px));
+  margin: var(--space-2xl) auto;
+  padding: var(--space-xl);
+  border: 1px solid var(--color-rule);
+  border-radius: var(--radius-card);
+  background: var(--color-white);
 }
 .team-invite-card h1 {
-  font: 42px/1.15 Newsreader, Georgia, serif;
-  color: #285447;
-  margin: 20px 0;
+  margin: 0 0 var(--space-lg);
+  font: var(--display-weight) 44px/1.08 var(--font-display);
+  letter-spacing: var(--tracking-display);
+  color: var(--color-ink);
+  overflow-wrap: break-word;
+  min-width: 0;
+  text-wrap: balance;
 }
 .team-invite-card h2 {
-  font: 30px/1.3 Newsreader, Georgia, serif;
-  color: #285447;
-  overflow-wrap: anywhere;
+  font: var(--display-weight) 34px/1.15 var(--font-display);
+  color: var(--color-ink);
+  overflow-wrap: break-word;
+  min-width: 0;
+  text-wrap: balance;
 }
 .team-invite-card > p {
-  margin-block: 16px;
-  color: #63705b;
-  line-height: 1.9;
-  font-size: 14px;
+  margin-block: var(--space-md);
+  color: var(--color-muted);
+  font-size: 15px;
+  line-height: 1.8;
 }
 .team-invite-card .team-invite-date {
-  color: #8a6538;
-  font-size: 20px;
-  margin-top: 8px;
+  margin-top: var(--space-sm);
+  color: var(--color-clay);
+  font-size: 22px;
+  font-weight: 600;
 }
 .team-invite-access {
-  border: 1px solid #dce3ce;
-  border-radius: 10px;
-  background: #f1f4e8;
-  padding: 18px;
-  margin-block: 22px;
+  margin-block: var(--space-7);
+  padding-block: var(--space-lg);
+  border-block: 1px solid var(--color-rule);
 }
 .team-invite-access p {
-  line-height: 1.9;
+  margin-top: var(--space-sm);
+  color: var(--color-muted);
   font-size: 14px;
-  color: #57664e;
-  margin-top: 10px;
+  line-height: 1.8;
 }
 .team-invite-access .dash-badge {
+  background: var(--color-sage);
+  color: var(--color-accent);
+  border-radius: var(--radius-control);
+  padding: var(--space-xs) var(--space-sm);
   font-size: 13px;
-  padding: 8px 12px;
-  color: #285447;
-  background: #e1ead5;
+  letter-spacing: 0;
+  text-transform: none;
 }
-@media (max-width: 600px) {
+:where(.setup-page, .team-invite-page) :is(button, a):focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 3px;
+}
+@media (hover: hover) {
+  .ws-form :is(input, textarea, select):hover {
+    background: var(--color-paper);
+  }
+}
+@media (max-width: 1100px) {
+  .setup-grid {
+    grid-template-columns: minmax(0, 1fr) 235px;
+    gap: var(--space-8);
+  }
+  .wedding-form .ws-panel {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .wedding-form .ws-panel-heading {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-5) var(--space-lg);
+    border-bottom: 1px solid var(--color-rule);
+  }
+}
+@media (max-width: 760px) {
+  .setup-header {
+    padding: var(--space-md) var(--space-lg);
+  }
+  .setup-header .brand-name {
+    font-size: 14px;
+  }
+  .setup-header > div {
+    gap: var(--space-md);
+    font-size: 12px;
+  }
+  .setup-main {
+    padding: 36px var(--space-lg) var(--space-14);
+  }
+  .setup-intro h1 {
+    font-size: 40px;
+  }
+  .setup-intro > p {
+    font-size: 15px;
+  }
+  .setup-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-8);
+  }
+  .setup-story {
+    position: static;
+    padding: var(--space-lg) 0 0;
+    border-left: 0;
+    border-top: 1px solid var(--color-rule);
+  }
+  .setup-story h2 {
+    font-size: 28px;
+  }
+  .ws-field-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .ws-panel-heading,
+  .wedding-form .ws-panel-heading {
+    padding: var(--space-5);
+  }
+  .ws-settings-fields {
+    padding: var(--space-5);
+  }
+  .wedding-details > div {
+    grid-template-columns: 90px minmax(0, 1fr);
+    gap: var(--space-md);
+  }
   .team-invite-card {
-    padding: 26px 20px;
-    margin-block: 28px;
+    margin-block: var(--space-8);
+    padding: var(--space-7) var(--space-lg);
   }
   .team-invite-card h1 {
-    font-size: 34px;
+    font-size: 36px;
+  }
+  .team-invite-card h2 {
+    font-size: 30px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ws-button {
+    transition: none;
   }
 }

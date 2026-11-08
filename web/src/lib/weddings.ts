@@ -12,6 +12,7 @@ export type WeddingInput = {
   city: string;
   latitude: number | null;
   longitude: number | null;
+  googlePlaceId?: string;
   contactRole: string;
   phone: string;
   welcome: string;
@@ -123,7 +124,10 @@ export function directions(wedding: WeddingInput) {
       : wedding.address + ", " + wedding.city;
   return (
     "https://www.google.com/maps/dir/?api=1&destination=" +
-    encodeURIComponent(destination)
+    encodeURIComponent(destination) +
+    (wedding.googlePlaceId
+      ? "&destination_place_id=" + encodeURIComponent(wedding.googlePlaceId)
+      : "")
   );
 }
 export function youtubePlayer(value: string) {

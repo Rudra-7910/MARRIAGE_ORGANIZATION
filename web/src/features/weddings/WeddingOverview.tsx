@@ -12,6 +12,8 @@ import type { Workspace } from "../../lib/weddings";
 import { getGuests, invitationLabels } from "../../lib/invitations";
 import { NearbyServices } from "./ServicesPage";
 import { WeddingCountdown } from "./WeddingCountdown";
+import { getPlanning, planningTime } from "../../lib/planning";
+import { getFinanceSummary, inr } from "../../lib/finance";
 
 export function WeddingOverview({
   data,
@@ -22,6 +24,13 @@ export function WeddingOverview({
 }) {
   const wedding = data.wedding!;
   const organizer = canOrganize(data.role);
+  const planning = useQuery({
+    queryKey: ["planning", userId],
+    queryFn: ({ signal }) => getPlanning(signal),
+    staleTime: 30000,
+    refetchInterval: 30000,
+    refetchIntervalInBackground: false,
+  });
   const params = { page: 1, search: "", side: "All" };
   const invitations = useQuery({
     queryKey: ["guests", userId, params],
@@ -31,15 +40,28 @@ export function WeddingOverview({
     refetchInterval: 30000,
     refetchIntervalInBackground: false,
   });
+  const finance = useQuery({
+    queryKey: ["finance-summary", userId],
+    queryFn: ({ signal }) => getFinanceSummary(signal),
+    enabled: organizer,
+    refetchInterval: 30000,
+    refetchIntervalInBackground: false,
+  });
+  const upcoming = (planning.data?.functions || [])
+    .filter(
+      (item) =>
+        new Date(
+          item.endsAt.length === 16 ? item.endsAt + ":00+05:30" : item.endsAt,
+        ).getTime() > Date.now(),
+    )
+    .sort((a, b) => a.startsAt.localeCompare(b.startsAt))
+    .slice(0, 3);
   return (
     <div className="celebration-overview">
       <div className="celebration-overview-heading">
         <div>
-          <span className="celebration-kicker">
-            {data.family?.name} · YOUR SHARED WEDDING SPACE
-          </span>
-          <h1>Your celebration, in motion.</h1>
-          <p>A little less following up. A little more together.</p>
+          <h1>Your wedding overview</h1>
+          <p>{data.family?.name}</p>
         </div>
         <span className="celebration-private">
           <Icon name="lock" />
@@ -72,20 +94,15 @@ export function WeddingOverview({
           <span>॥ शुभ विवाह ॥</span>
           <strong>
             {wedding.brideName.slice(0, 1)}
-            <em>&</em>
+            <span>&</span>
             {wedding.groomName.slice(0, 1)}
           </strong>
-          <p>A beautiful beginning.</p>
         </div>
         <div className="celebration-organizer-identity">
-          <span className="celebration-kicker">
-            YOUR PEOPLE. YOUR PLANS. YOUR BIG DAY.
-          </span>
           <h2>
-            {wedding.brideName} <em>&</em> {wedding.groomName}
+            {wedding.brideName} <span>&</span> {wedding.groomName}
           </h2>
           <div className="celebration-organizer-date">
-            <span className="celebration-kicker">THE WEDDING DAY</span>
             <time dateTime={wedding.date}>{weddingDate(wedding.date)}</time>
             <p>
               <Icon name="clock" />
@@ -133,11 +150,179 @@ export function WeddingOverview({
           </Link>
         </div>
       </section>
+      {organizer && (
+        <section
+          className="plan-overview overview-finance"
+          aria-label="Private spending summary"
+        >
+          <div className="celebration-card-heading">
+            <div>
+              <h2>Budget summary</h2>
+              <p>Visible to your wedding’s organizers only.</p>
+            </div>
+            <Link className="ws-text-link" to="/app/budget">
+              Open budget <Icon name="arrow" />
+            </Link>
+          </div>
+          {finance.isPending ? (
+            <p role="status">Loading spending totals…</p>
+          ) : finance.isError ? (
+            <div role="alert">
+              <p>{apiMessage(finance.error)}</p>
+              <button className="ws-button" onClick={() => finance.refetch()}>
+                Reload spending
+              </button>
+            </div>
+          ) : (
+            finance.data && (
+              <div className="plan-metrics">
+                {[
+                  {
+                    label: "Wedding budget",
+                    value:
+                      finance.data.budgetPaise === null
+                        ? "Not set"
+                        : inr(finance.data.budgetPaise),
+                  },
+                  {
+                    label: "Agreed costs",
+                    value: inr(finance.data.totals.agreedPaise),
+                  },
+                  {
+                    label: "Paid so far",
+                    value: inr(finance.data.totals.paidPaise),
+                  },
+                  {
+                    label: "Pending dues",
+                    value: inr(finance.data.totals.pendingPaise),
+                  },
+                ].map((item) => (
+                  <div className="plan-metric" key={item.label}>
+                    <span>{item.label}</span>
+                    <strong>{item.value}</strong>
+                  </div>
+                ))}
+              </div>
+            )
+          )}
+        </section>
+      )}
+      {upcoming.length > 0 && (
+        <section className="plan-overview" aria-label="Upcoming functions">
+          <div className="celebration-card-heading">
+            <h2>Upcoming functions</h2>
+            <Link className="ws-text-link" to="/app/functions">
+              All functions <Icon name="arrow" />
+            </Link>
+          </div>
+          {upcoming.map((item) => (
+            <div className="plan-overview-row" key={item.id}>
+              <span>
+                <strong>{item.name}</strong>
+                <span>{item.venue}</span>
+              </span>
+              <time dateTime={item.startsAt}>
+                {planningTime(item.startsAt)}
+              </time>
+            </div>
+          ))}
+        </section>
+      )}
+      <section className="plan-overview" aria-label="Wedding coordination">
+        <div className="celebration-card-heading">
+          <div>
+            <h2>Department progress</h2>
+          </div>
+          <Link className="ws-text-link" to="/app/departments">
+            Open shared plan <Icon name="arrow" />
+          </Link>
+        </div>
+        {planning.isPending ? (
+          <p role="status">Loading your departments…</p>
+        ) : planning.isError ? (
+          <div role="alert">
+            <p>{apiMessage(planning.error)}</p>
+            <button className="ws-button" onClick={() => planning.refetch()}>
+              Reload plan
+            </button>
+          </div>
+        ) : (
+          planning.data && (
+            <>
+              <div className="plan-metrics">
+                <div className="plan-metric">
+                  <span>Departments</span>
+                  <strong>{planning.data.departments.length}</strong>
+                  <small>Family teams & vendors</small>
+                </div>
+                <div className="plan-metric">
+                  <span>In progress</span>
+                  <strong>
+                    {
+                      planning.data.departments.filter(
+                        (item) => item.status === "In progress",
+                      ).length
+                    }
+                  </strong>
+                </div>
+                <div className="plan-metric">
+                  <span>Done</span>
+                  <strong>
+                    {
+                      planning.data.departments.filter(
+                        (item) => item.status === "Done",
+                      ).length
+                    }
+                  </strong>
+                </div>
+                <div className="plan-metric">
+                  <span>Need attention</span>
+                  <strong>
+                    {
+                      planning.data.departments.filter(
+                        (item) => item.attentionReasons.length,
+                      ).length
+                    }
+                  </strong>
+                  <Link to="/app/attention" className="ws-text-link">
+                    Review requests
+                  </Link>
+                </div>
+              </div>
+              {planning.data.departments.length ? (
+                planning.data.departments.slice(0, 4).map((item) => (
+                  <div className="plan-overview-row" key={item.id}>
+                    <span>
+                      <strong>{item.name}</strong>
+                      <span
+                        className={
+                          "plan-status " +
+                          item.status.toLowerCase().replaceAll(" ", "-")
+                        }
+                      >
+                        {item.status}
+                      </span>
+                    </span>
+                    <span>
+                      {item.completed} / {item.total} checklist items done
+                      {item.attentionReasons.length ? ". Needs attention" : ""}
+                    </span>
+                  </div>
+                ))
+              ) : (
+                <p className="plan-muted">
+                  No departments yet. Add a department or start with the
+                  wedding checklist.
+                </p>
+              )}
+            </>
+          )
+        )}
+      </section>
       <div className="celebration-overview-grid">
         <section className="celebration-overview-next">
           <div className="celebration-card-heading">
-            <h2>Your next steps</h2>
-            <span>ONE THING AT A TIME</span>
+            <h2>Quick actions</h2>
           </div>
           {organizer && (
             <Link className="celebration-next-step" to="/app/guests">
@@ -147,8 +332,7 @@ export function WeddingOverview({
               <div>
                 <h3>Add a guest / family</h3>
                 <p>
-                  Bring your favourite people together. A name, an email, a
-                  little love.
+                  Add a name and email address, then prepare their invitation.
                 </p>
                 <strong>
                   Open guest directory <Icon name="arrow" />
@@ -171,7 +355,7 @@ export function WeddingOverview({
                 contact.
               </p>
               <strong>
-                See their experience <Icon name="arrow" />
+                Open guest website <Icon name="arrow" />
               </strong>
             </div>
           </Link>
@@ -183,7 +367,7 @@ export function WeddingOverview({
           </div>
           <dl className="celebration-overview-details">
             <div>
-              <dt>THE DAY & SHUBH MUHURAT</dt>
+              <dt>Day & shubh muhurat</dt>
               <dd>
                 <time dateTime={wedding.date}>{weddingDate(wedding.date)}</time>
                 <small>
@@ -196,7 +380,7 @@ export function WeddingOverview({
               </dd>
             </div>
             <div>
-              <dt>THE PLACE</dt>
+              <dt>Venue</dt>
               <dd>
                 {wedding.venue}
                 <small>
@@ -205,7 +389,7 @@ export function WeddingOverview({
               </dd>
             </div>
             <div>
-              <dt>FAMILY CONTACT</dt>
+              <dt>Family contact</dt>
               <dd>
                 {wedding.contactRole}
                 <a href={"tel:" + wedding.phone.replace(/[^+\d]/g, "")}>
@@ -214,7 +398,7 @@ export function WeddingOverview({
               </dd>
             </div>
             <div>
-              <dt>DIRECTIONS</dt>
+              <dt>Directions</dt>
               <dd>
                 <a
                   className="ws-button"
@@ -234,9 +418,6 @@ export function WeddingOverview({
         <section className="celebration-invitation-summary">
           <div className="celebration-card-heading">
             <div>
-              <span className="celebration-kicker">
-                A PERSONAL WELCOME FOR YOUR PEOPLE
-              </span>
               <h2>Guests & invitations</h2>
             </div>
             <Link className="ws-text-link" to="/app/guests">
@@ -346,10 +527,10 @@ export function WeddingOverview({
                 ) : (
                   <div className="celebration-empty">
                     <Icon name="mail" />
-                    <h3>Your people belong here.</h3>
+                    <h3>No guest families yet</h3>
                     <p>
-                      Add your first family and send an invitation with your own
-                      words.
+                      Add a guest or family with an email address to prepare
+                      their invitation.
                     </p>
                     <Link className="ws-button ws-primary" to="/app/guests">
                       Add your first guest <Icon name="plus" />
@@ -366,47 +547,6 @@ export function WeddingOverview({
         </section>
       )}
       <NearbyServices wedding={wedding} />
-      <section className="celebration-planned">
-        <div className="celebration-card-heading">
-          <h2>A little more, on the way.</h2>
-          <span>COMING NEXT</span>
-        </div>
-        <div>
-          {[
-            {
-              title: "Teams & Services",
-              text: "A place for your family, helpers and wedding team.",
-              href: "/app/departments",
-              icon: "people" as const,
-            },
-            ...(organizer
-              ? [
-                  {
-                    title: "Budget & Expenses",
-                    text: "Keep agreed costs and pending dues together.",
-                    href: "/app/budget",
-                    icon: "wallet" as const,
-                  },
-                ]
-              : []),
-            {
-              title: "Wedding memories",
-              text: "A shared home for the moments you’ll keep.",
-              href: "/app/photos",
-              icon: "camera" as const,
-            },
-          ].map((module) => (
-            <Link key={module.title} to={module.href}>
-              <Icon name={module.icon} />
-              <h3>{module.title}</h3>
-              <p>{module.text}</p>
-              <span>
-                Coming next <Icon name="arrow" />
-              </span>
-            </Link>
-          ))}
-        </div>
-      </section>
     </div>
   );
 }

@@ -1,4 +1,8 @@
 import { createServer } from "node:http";
+import { existsSync } from "node:fs";
+import path from "node:path";
+import { logger } from "./config/logger.js";
+import { attachRealtime } from "./config/realtime.js";
 import { createApp } from "./app.js";
 import { env } from "./config/env.js";
 import { connectDatabase, disconnectDatabase } from "./config/database.js";
@@ -13,11 +17,22 @@ async function exitAfterDisconnect(exitCode: number) {
 }
 
 async function startServer() {
+  if (
+    env.isProduction &&
+    !existsSync(path.resolve(import.meta.dirname, "../../web/dist/index.html"))
+  ) {
+    throw new Error(
+      "The frontend build is missing. Run npm run build before starting production.",
+    );
+  }
   // Start HTTP only after MongoDB and the required indexes are ready.
   await connectDatabase();
 
   const app = createApp();
   const server = createServer(app);
+  server.requestTimeout = 30000;
+  server.headersTimeout = 15000;
+  const io = attachRealtime(server, app);
   let stopping = false;
 
   server.on("error", async () => {
@@ -40,7 +55,7 @@ async function startServer() {
     const timeout = setTimeout(() => process.exit(1), 10000);
     timeout.unref();
 
-    server.close(async () => {
+    io.close(async () => {
       await exitAfterDisconnect(0);
     });
     server.closeIdleConnections();
@@ -50,9 +65,10 @@ async function startServer() {
   process.once("SIGTERM", shutdown);
 }
 
-startServer().catch(async () => {
-  console.error(
-    "[startup] Server could not start. Check MongoDB connectivity and the required database indexes.",
+startServer().catch(async (error: unknown) => {
+  logger.error(
+    { errorType: error instanceof Error ? error.name : "UnknownError" },
+    "Startup failed. Check the build, MongoDB connectivity and indexes.",
   );
   await exitAfterDisconnect(1);
 });

@@ -28,7 +28,14 @@ export type GuestList = {
   };
   emailConfigured: boolean;
 };
+export type GuestAccess = {
+  version: number;
+  functionIds: string[];
+  revoked: boolean;
+  url: string | null;
+};
 export type InvitationDraft = {
+  access?: GuestAccess;
   guest: GuestRecord;
   subject: string;
   message: string;

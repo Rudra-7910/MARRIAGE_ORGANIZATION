@@ -69,14 +69,14 @@ export function SetupPage({ user }: { user: AuthUser }) {
       )}
       <main className="setup-main">
         <div className="setup-intro">
-          <span className="ws-eyebrow">LET’S MAKE ROOM FOR YOUR PEOPLE</span>
-          <h1>
-            Your wedding,
-            <br />
-            <em>your beginning.</em>
-          </h1>
+          <h1>Set up your wedding</h1>
           <p>
-            A few details to bring your family and your celebration together.
+            Add your family first, then the ceremony date, venue and contact.
+          </p>
+          <p className="ws-help">
+            Here as a service provider?{" "}
+            <Link to="/app/provider">Create your service profile</Link> without
+            registering a wedding.
           </p>
         </div>
         {query.isPending ? (
@@ -177,14 +177,9 @@ export function SetupPage({ user }: { user: AuthUser }) {
               )}
             </div>
             <aside className="setup-story">
-              <span className="ws-eyebrow">ONE BEAUTIFUL BEGINNING</span>
-              <h2>
-                From your family,
-                <br />
-                <em>to your forever.</em>
-              </h2>
+              <h2>What happens next</h2>
               <ol aria-label="Wedding setup flow">
-                {["Your family", "Your wedding", "One shared dashboard"].map(
+                {["Add your family", "Set the wedding details", "Open your dashboard"].map(
                   (label, index) => (
                     <li key={label}>
                       <span>{index + 1}</span>
@@ -193,9 +188,9 @@ export function SetupPage({ user }: { user: AuthUser }) {
                         <p>
                           {
                             [
-                              "Give your family a shared place.",
-                              "Add the details that make it yours.",
-                              "Your plans and guest website, in sync.",
+                              "Choose a family name and side.",
+                              "Save the date, ceremony time and venue.",
+                              "Manage departments, expenses and invitations.",
                             ][index]
                           }
                         </p>

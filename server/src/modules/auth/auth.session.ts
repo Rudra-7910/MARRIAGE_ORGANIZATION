@@ -7,11 +7,13 @@ import { z } from "zod";
 import { isDatabaseReady } from "../../config/database.js";
 import { env } from "../../config/env.js";
 import { httpError } from "../../middleware/error-handler.js";
+import { User } from "./user.model.js";
 
 declare module "express-session" {
   interface SessionData {
     userId?: string;
     csrfToken?: string;
+    sessionVersion?: number;
   }
 }
 export const cookieName = env.isProduction ? "__Host-mmm.sid" : "mmm.sid";
@@ -59,7 +61,7 @@ export function createSessionMiddleware(): RequestHandler {
         cookie: { ...cookieOptions, maxAge: 7 * 24 * 60 * 60 * 1000 },
       });
     }
-    middleware(req, res, (error) => {
+    middleware(req, res, async (error) => {
       if (error) {
         next(
           httpError(
@@ -70,7 +72,42 @@ export function createSessionMiddleware(): RequestHandler {
         );
         return;
       }
-      next();
+      try {
+        if (req.session.userId) {
+          const user = await User.findById(req.session.userId).select(
+            "+sessionVersion",
+          );
+          if (
+            !user ||
+            (user.sessionVersion || 0) !== (req.session.sessionVersion || 0)
+          ) {
+            await new Promise<void>((resolve, reject) =>
+              req.session.destroy((failure) =>
+                failure ? reject(failure) : resolve(),
+              ),
+            );
+            next(
+              httpError(
+                401,
+                "UNAUTHENTICATED",
+                "Please log in again to continue.",
+              ),
+            );
+            return;
+          }
+          res.locals ||= {};
+          res.locals.user = user;
+        }
+        next();
+      } catch {
+        next(
+          httpError(
+            503,
+            "SESSION_UNAVAILABLE",
+            "Could not check your session. Please try again.",
+          ),
+        );
+      }
     });
   };
 }
@@ -108,11 +145,18 @@ export function checkCsrf(req: Request, _res: Response, next: NextFunction) {
   }
   next();
 }
-export async function startUserSession(req: Request, userId: string) {
+export async function startUserSession(
+  req: Request,
+  userId: string,
+  sessionVersion = 0,
+) {
+  const oldSessionId = req.sessionID;
   await new Promise<void>((resolve, reject) =>
     req.session.regenerate((error) => (error ? reject(error) : resolve())),
   );
+  req.app.locals.realtime?.disconnectSession(oldSessionId);
   req.session.userId = userId;
+  req.session.sessionVersion = sessionVersion;
   req.session.csrfToken = randomBytes(32).toString("hex");
   await new Promise<void>((resolve, reject) =>
     req.session.save((error) => (error ? reject(error) : resolve())),

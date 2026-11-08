@@ -1,5 +1,8 @@
 import mongoose from "mongoose";
 import { randomUUID } from "node:crypto";
+import { planningSchema } from "../planning/planning.schema.js";
+import { siteSchema } from "../site/site.schema.js";
+import { financeSchema } from "../finance/finance.schema.js";
 
 export const weddingRoles = [
   "Admin",
@@ -40,6 +43,7 @@ const weddingSchema = new mongoose.Schema(
       required: true,
       unique: true,
     },
+    permissionRevision: { type: Number, default: 0, select: false },
     publicId: {
       type: String,
       default: randomUUID,
@@ -98,6 +102,10 @@ const weddingSchema = new mongoose.Schema(
     phone: { type: String, required: true, trim: true },
     welcome: { type: String, default: "" },
     youtube: { type: String, default: "" },
+    googlePlaceId: { type: String, default: "" },
+    planning: { type: planningSchema, default: () => ({}) },
+    site: { type: siteSchema, default: () => ({}), select: false },
+    finance: { type: financeSchema, default: () => ({}), select: false },
   },
   { timestamps: true },
 );

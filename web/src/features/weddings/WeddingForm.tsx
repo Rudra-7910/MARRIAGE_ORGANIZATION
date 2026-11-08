@@ -1,5 +1,6 @@
 import { useForm } from "react-hook-form";
 import type { WeddingInput } from "../../lib/weddings";
+import { PlacePicker } from "../integrations/PlacePicker";
 
 export function WeddingForm({
   initial,
@@ -16,7 +17,7 @@ export function WeddingForm({
   editing?: boolean;
   onReload?: () => void;
 }) {
-  const { register, handleSubmit } = useForm<WeddingInput>({
+  const { register, handleSubmit, setValue, watch } = useForm<WeddingInput>({
     defaultValues: {
       brideName: initial?.brideName || "",
       groomName: initial?.groomName || "",
@@ -28,6 +29,7 @@ export function WeddingForm({
       city: initial?.city || "",
       latitude: initial?.latitude ?? null,
       longitude: initial?.longitude ?? null,
+      googlePlaceId: initial?.googlePlaceId || "",
       contactRole: initial?.contactRole || "",
       phone: initial?.phone || "",
       welcome: initial?.welcome || "",
@@ -65,7 +67,7 @@ export function WeddingForm({
         </section>
         <section className="ws-panel">
           <div className="ws-panel-heading">
-            <h2>The date & celebration</h2>
+            <h2>Date & ceremony</h2>
             <span className="setup-section-number">02</span>
           </div>
           <div className="ws-settings-fields ws-field-grid">
@@ -90,10 +92,20 @@ export function WeddingForm({
         </section>
         <section className="ws-panel">
           <div className="ws-panel-heading">
-            <h2>A place to come together</h2>
+            <h2>Venue & directions</h2>
             <span className="setup-section-number">03</span>
           </div>
           <div className="ws-settings-fields">
+            <PlacePicker
+              disabled={saving}
+              placeId={watch("googlePlaceId")}
+              onSelect={(place) => {
+                setValue("googlePlaceId", place.id, { shouldDirty: true });
+              }}
+              onClear={() =>
+                setValue("googlePlaceId", "", { shouldDirty: true })
+              }
+            />
             <label>
               Venue name
               <input
@@ -157,7 +169,7 @@ export function WeddingForm({
         </section>
         <section className="ws-panel">
           <div className="ws-panel-heading">
-            <h2>A warm welcome for your guests</h2>
+            <h2>Your guest welcome</h2>
             <span className="setup-section-number">04</span>
           </div>
           <div className="ws-settings-fields">

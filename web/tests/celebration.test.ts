@@ -8,7 +8,11 @@ import { HomePage } from "../src/pages/HomePage";
 import { GuestWeddingPage } from "../src/features/weddings/GuestWeddingPage";
 import { WeddingOverview } from "../src/features/weddings/WeddingOverview";
 import { WeddingCountdown } from "../src/features/weddings/WeddingCountdown";
-import { weddingCountdown, weddingDate, weddingTime } from "../src/lib/weddings";
+import {
+  weddingCountdown,
+  weddingDate,
+  weddingTime,
+} from "../src/lib/weddings";
 import type { Workspace, WeddingRecord } from "../src/lib/weddings";
 import type { GuestList } from "../src/lib/invitations";
 
@@ -43,7 +47,11 @@ test("the shubh muhurat countdown uses IST, including for guests abroad", () => 
   );
   assert.equal(weddingCountdown("bad-date", "25:00", now), null);
   assert.equal(
-    weddingCountdown("2027-02-14", "18:00", Date.parse("2027-02-14T12:29:59.500Z"))!.seconds,
+    weddingCountdown(
+      "2027-02-14",
+      "18:00",
+      Date.parse("2027-02-14T12:29:59.500Z"),
+    )!.seconds,
     1,
   );
   assert.equal(weddingDate("2027-02-14"), "14 February 2027");
@@ -80,18 +88,28 @@ test("a wedding fifteen days away shows a countdown, never the current time or a
       detailsHref: "#ceremony",
     }),
   );
-  assert.ok(html.includes("15 days, 0 hours, 0 minutes, 0 seconds until the wedding"));
+  assert.ok(
+    html.includes("15 days, 0 hours, 0 minutes, 0 seconds until the wedding"),
+  );
   assert.ok(html.includes('href="#ceremony"'));
   assert.ok(!html.includes("CURRENT TIME"));
   assert.ok(!html.includes("wedding-clock-dial"));
   assert.ok(html.includes('aria-live="off"'));
   assert.deepEqual(weddingCountdown("2027-02-14", "18:00", now + 1000), {
-    days: 14, hours: 23, minutes: 59, seconds: 59, started: false,
+    days: 14,
+    hours: 23,
+    minutes: 59,
+    seconds: 59,
+    started: false,
   });
   const updated = renderToStaticMarkup(
     h(WeddingCountdown, { date: "2027-02-15", time: "18:00" }),
   );
-  assert.ok(updated.includes("16 days, 0 hours, 0 minutes, 0 seconds until the wedding"));
+  assert.ok(
+    updated.includes(
+      "16 days, 0 hours, 0 minutes, 0 seconds until the wedding",
+    ),
+  );
 });
 
 const wedding: WeddingRecord = {
@@ -238,12 +256,16 @@ test("organizer totals use the saved guest query; worker rendering never exposes
 });
 
 test("homepage interactions are clearly illustrative and lead to real signup rather than fake workspaces", () => {
-  const html = renderToStaticMarkup(h(MemoryRouter, null, h(HomePage)));
-  assert.ok(html.includes("Shaadi ke pal,"));
+  const client = new QueryClient();
+  const html = renderToStaticMarkup(
+    h(QueryClientProvider, { client }, h(MemoryRouter, null, h(HomePage))),
+  );
+  client.clear();
+  assert.ok(html.includes("Your wedding,"));
   assert.ok(html.includes('role="tablist"'));
   assert.equal((html.match(/role="tab" /g) || []).length, 3);
   assert.equal((html.match(/<details/g) || []).length, 3);
-  assert.ok(html.includes("NOTHING IS SENT"));
+  assert.ok(html.includes("This preview does not send email."));
   assert.ok(html.includes('href="/signup"'));
   assert.ok(!html.includes("/demo/"));
 });

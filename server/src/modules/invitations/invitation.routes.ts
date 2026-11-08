@@ -1,13 +1,17 @@
-import { randomUUID } from "node:crypto";
+import {
+  lockOrganizerAccess,
+  requireUser,
+} from "../../middleware/wedding-access.js";
+import { randomUUID, randomBytes } from "node:crypto";
 import { Router } from "express";
 import mongoose from "mongoose";
 import escapeStringRegexp from "escape-string-regexp";
 import { rateLimit } from "express-rate-limit";
 import { z } from "zod";
+import { accessToken, tokenHash } from "../site/access-token.js";
 import { env } from "../../config/env.js";
 import { httpError } from "../../middleware/error-handler.js";
 import { createSessionMiddleware, checkCsrf } from "../auth/auth.session.js";
-import { User } from "../auth/user.model.js";
 import { Wedding } from "../weddings/wedding.models.js";
 import { Guest } from "./invitation.model.js";
 import {
@@ -70,6 +74,8 @@ function guestDetails(guest: InstanceType<typeof Guest>) {
     email: guest.email,
     side: guest.side,
     version: guest.__v,
+    functionIds: guest.invitedFunctionIds.map(String),
+    accessRevoked: guest.accessRevoked,
     status,
     canEdit: !invitation || (status === "failed" && !invitation.uncertain),
     canRetry: Boolean(
@@ -92,13 +98,8 @@ export function createInvitationRouter(
   sendEmail: EmailSender = sendWithResend,
 ) {
   const router = Router();
-  router.use(createSessionMiddleware());
+  router.use(createSessionMiddleware(), requireUser);
   router.use(async (req, res, next) => {
-    if (
-      !req.session.userId ||
-      !(await User.exists({ _id: req.session.userId }))
-    )
-      throw httpError(401, "UNAUTHENTICATED", "Please log in to continue.");
     const wedding = await Wedding.findOne({
       "members.userId": req.session.userId,
     });
@@ -127,6 +128,26 @@ export function createInvitationRouter(
   router.param("id", (_req, _res, next, id) => {
     if (!mongoose.isObjectIdOrHexString(id))
       throw httpError(404, "GUEST_NOT_FOUND", "This guest could not be found.");
+    next();
+  });
+
+  // Initialize legacy guest links once; no invitation content or version is changed.
+  router.use("/:id", async (req, res, next) => {
+    const nonce = randomBytes(16).toString("hex");
+    const guestId = String(req.params.id);
+    await Guest.updateOne(
+      {
+        _id: guestId,
+        wedding: res.locals.wedding._id,
+        accessNonce: { $exists: false },
+      },
+      {
+        $set: {
+          accessNonce: nonce,
+          accessHash: tokenHash(accessToken("guest", guestId, nonce)),
+        },
+      },
+    );
     next();
   });
 
@@ -205,7 +226,14 @@ export function createInvitationRouter(
   router.post("/", checkCsrf, async (req, res) => {
     const wedding = res.locals.wedding as InstanceType<typeof Wedding>;
     const values = guestInput.parse(req.body);
-    const guest = await Guest.create({ ...values, wedding: wedding._id });
+    const guest = await mongoose.connection.transaction(async (session) => {
+      await lockOrganizerAccess(wedding, req.session.userId!, session);
+      const [created] = await Guest.create(
+        [{ ...values, wedding: wedding._id }],
+        { session },
+      );
+      return created!;
+    });
     res.status(201).json({ data: guestDetails(guest) });
   });
   router.patch("/:id", checkCsrf, async (req, res) => {
@@ -217,7 +245,7 @@ export function createInvitationRouter(
     const guest = await Guest.findOne({
       _id: req.params.id,
       wedding: wedding._id,
-    });
+    }).select("+accessNonce");
     if (!guest)
       throw httpError(404, "GUEST_NOT_FOUND", "This guest could not be found.");
     if (guest.__v !== values.version)
@@ -232,25 +260,29 @@ export function createInvitationRouter(
         "INVITATION_LOCKED",
         "An invitation was already submitted or may be in progress. Its recipient cannot be changed.",
       );
-    const updated = await Guest.findOneAndUpdate(
-      { _id: guest._id, wedding: wedding._id, __v: values.version },
-      {
-        $set: {
-          name: values.name,
-          email: values.email,
-          side: values.side,
-          invitation: null,
+    const updated = await mongoose.connection.transaction(async (session) => {
+      await lockOrganizerAccess(wedding, req.session.userId!, session);
+      const saved = await Guest.findOneAndUpdate(
+        { _id: guest._id, wedding: wedding._id, __v: values.version },
+        {
+          $set: {
+            name: values.name,
+            email: values.email,
+            side: values.side,
+            invitation: null,
+          },
+          $inc: { __v: 1 },
         },
-        $inc: { __v: 1 },
-      },
-      { returnDocument: "after", runValidators: true },
-    );
-    if (!updated)
-      throw httpError(
-        409,
-        "INVITATION_CONFLICT",
-        "This guest or invitation changed. Reload it before continuing.",
+        { session, returnDocument: "after", runValidators: true },
       );
+      if (!saved)
+        throw httpError(
+          409,
+          "INVITATION_CONFLICT",
+          "This guest or invitation changed. Reload it before continuing.",
+        );
+      return saved;
+    });
     res.json({ data: guestDetails(updated) });
   });
   router.get("/:id/invitation", async (req, res) => {
@@ -258,7 +290,7 @@ export function createInvitationRouter(
     const guest = await Guest.findOne({
       _id: req.params.id,
       wedding: wedding._id,
-    });
+    }).select("+accessNonce");
     if (!guest)
       throw httpError(404, "GUEST_NOT_FOUND", "This guest could not be found.");
     const draft = guest.invitation || invitationDefaults(wedding);
@@ -268,6 +300,18 @@ export function createInvitationRouter(
     res.json({
       data: {
         guest: guestDetails(guest),
+        access: {
+          version: guest.__v,
+          functionIds: guest.invitedFunctionIds.map(String),
+          revoked: guest.accessRevoked,
+          url: guest.accessRevoked
+            ? null
+            : env.appOrigin +
+              "/w/" +
+              wedding.publicId +
+              "#invite=" +
+              accessToken("guest", guest.id, guest.accessNonce!),
+        },
         subject: draft.subject,
         message: draft.message,
         html: rendered.html,
@@ -282,7 +326,7 @@ export function createInvitationRouter(
     const guest = await Guest.findOne({
       _id: req.params.id,
       wedding: wedding._id,
-    });
+    }).select("+accessNonce");
     if (!guest)
       throw httpError(404, "GUEST_NOT_FOUND", "This guest could not be found.");
     if (guest.__v !== values.version || wedding.__v !== values.weddingVersion)
@@ -340,12 +384,18 @@ export function createInvitationRouter(
       const guest = await Guest.findOne({
         _id: req.params.id,
         wedding: wedding._id,
-      });
+      }).select("+accessNonce");
       if (!guest)
         throw httpError(
           404,
           "GUEST_NOT_FOUND",
           "This guest could not be found.",
+        );
+      if (guest.accessRevoked)
+        throw httpError(
+          409,
+          "INVITATION_WITHDRAWN",
+          "Re-enable this family's personal invitation link before sending or retrying.",
         );
       if (guest.__v !== version)
         throw httpError(
@@ -419,17 +469,21 @@ export function createInvitationRouter(
         };
       }
       // The version condition atomically claims this guest across organizers and servers.
-      const claimed = await Guest.findOneAndUpdate(
-        { _id: guest._id, wedding: wedding._id, __v: version },
-        { $set: { invitation }, $inc: { __v: 1 } },
-        { returnDocument: "after", runValidators: true },
-      );
-      if (!claimed)
-        throw httpError(
-          409,
-          "INVITATION_CONFLICT",
-          "This guest or invitation changed. Reload it before continuing.",
+      await mongoose.connection.transaction(async (session) => {
+        await lockOrganizerAccess(wedding, req.session.userId!, session);
+        const saved = await Guest.findOneAndUpdate(
+          { _id: guest._id, wedding: wedding._id, __v: version },
+          { $set: { invitation }, $inc: { __v: 1 } },
+          { session, returnDocument: "after", runValidators: true },
         );
+        if (!saved)
+          throw httpError(
+            409,
+            "INVITATION_CONFLICT",
+            "This guest or invitation changed. Reload it before continuing.",
+          );
+        return saved;
+      });
       let result: SendResult;
       try {
         result = await sendEmail(

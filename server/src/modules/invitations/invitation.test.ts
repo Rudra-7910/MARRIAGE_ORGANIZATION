@@ -1,14 +1,14 @@
 import assert from "node:assert/strict";
 import { createServer } from "node:http";
 import { test } from "node:test";
-import { MongoMemoryServer } from "mongodb-memory-server";
+import { MongoMemoryReplSet } from "mongodb-memory-server";
 import type { EmailPayload, SendResult } from "./invitation.email.js";
 
 test(
   "manual invitations: isolated database, real sessions, safe provider outcomes",
   { timeout: 120000 },
   async (t) => {
-    const mongo = await MongoMemoryServer.create();
+    const mongo = await MongoMemoryReplSet.create({ replSet: { count: 1 } });
     process.env.NODE_ENV = "test";
     process.env.MONGODB_URI = mongo.getUri("invitation_test");
     process.env.SESSION_SECRET =
@@ -17,8 +17,9 @@ test(
     process.env.TRUST_PROXY_CIDRS = "";
     process.env.RESEND_API_KEY = "test-placeholder-never-used-for-real-mail";
     process.env.RESEND_FROM = "Wedding <invitations@example.com>";
-    const { connectDatabase, disconnectDatabase } =
-      await import("../../config/database.js");
+    const { connectDatabase, disconnectDatabase } = await import(
+      "../../config/database.js"
+    );
     const { createApp } = await import("../../app.js");
     const { env } = await import("../../config/env.js");
     const { Guest } = await import("./invitation.model.js");

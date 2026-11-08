@@ -1,7 +1,34 @@
 import assert from "node:assert/strict";
 import { createServer } from "node:http";
 import { test } from "node:test";
-import { api, getCurrentUser, login, logout, signup } from "../src/lib/api";
+import {
+  accountPathFromState,
+  api,
+  getCurrentUser,
+  login,
+  logout,
+  signup,
+} from "../src/lib/api";
+
+test("login continuations allow private app paths and reject external or normalized escaping URLs", () => {
+  assert.equal(
+    accountPathFromState({ returnTo: "/app/budget?view=active#expenses" }),
+    "/app/budget?view=active#expenses",
+  );
+  for (const returnTo of [
+    "https://evil.example/app/budget",
+    "//evil.example/app/budget",
+    "/login",
+    "/app/../../login",
+    "/app/../../\\evil.example/app/budget",
+    "javascript:alert(1)",
+    "app/budget",
+  ]) {
+    assert.equal(accountPathFromState({ returnTo }), "/app/overview");
+  }
+  assert.equal(accountPathFromState(null), "/app/overview");
+  assert.equal(accountPathFromState({}), "/app/overview");
+});
 
 test("Axios auth client sends JSON and CSRF headers and preserves server errors", async (t) => {
   const user = { id: "test-user", name: "API Test", email: "api@example.com" };

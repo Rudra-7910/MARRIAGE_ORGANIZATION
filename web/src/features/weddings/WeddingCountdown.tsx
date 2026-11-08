@@ -21,7 +21,8 @@ export function WeddingCountdown({
         timer = setInterval(() => {
           const current = Date.now();
           setNow(current);
-          if (weddingCountdown(date, time, current)?.started) clearInterval(timer);
+          if (weddingCountdown(date, time, current)?.started)
+            clearInterval(timer);
         }, 1000);
       }
     }
@@ -40,17 +41,11 @@ export function WeddingCountdown({
       aria-label="Countdown to the saved wedding ceremony time"
     >
       <div className="wedding-countdown-copy">
-        <span className="wedding-countdown-eyebrow">
-          <Icon name="spark" /> THE BEAUTIFUL WAIT
-        </span>
+        <span className="wedding-countdown-eyebrow">Wedding countdown</span>
         <p className="wedding-countdown-heading" lang="hi">
           {remaining.started ? "शुभ मुहूर्त आ गया है" : "शुभ मुहूर्त तक"}
         </p>
-        <p>
-          {remaining.started
-            ? "Wishing you a beautiful new beginning."
-            : "Counting down to the wedding."}
-        </p>
+        {!remaining.started && <p>Ceremony time in IST (UTC+5:30).</p>}
         {detailsHref && (
           <a href={detailsHref}>
             Ceremony details <Icon name="arrow" />

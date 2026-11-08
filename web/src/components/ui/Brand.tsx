@@ -8,7 +8,6 @@ export function Brand() {
       </span>
       <span className="brand-name">
         Make My Marriage
-        <span className="brand-caption">A little more together.</span>
       </span>
     </Link>
   );

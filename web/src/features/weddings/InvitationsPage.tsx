@@ -1,3 +1,4 @@
+import { GuestAccessForm } from "./GuestAccessForm";
 import { apiMessage } from "../../lib/api";
 import { useEffect, useState } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
@@ -64,9 +65,8 @@ export function GuestsPage({ userId }: { userId: string }) {
     <div className="invite-page">
       <div className="dash-page-heading">
         <div>
-          <span className="dash-kicker">A LITTLE JOY, IN THEIR INBOX</span>
           <h1>Guests & invitations</h1>
-          <p>Your favourite people. A personal invitation for every family.</p>
+          <p>Add guest families and send individual email invitations.</p>
         </div>
         <button className="ws-button ws-primary" onClick={() => setForm("new")}>
           <Icon name="plus" />
@@ -240,7 +240,7 @@ export function GuestsPage({ userId }: { userId: string }) {
                           <h2>
                             {search || side !== "All"
                               ? "No families match this view"
-                              : "Good celebrations start with your people."}
+                              : "No guest families yet"}
                           </h2>
                           <p>
                             {search || side !== "All"
@@ -319,7 +319,7 @@ function GuestForm({
   return (
     <section className="dash-card invite-add-card">
       <div className="invite-card-title">
-        <h2>{guest ? "Edit guest / family" : "Bring your people together"}</h2>
+        <h2>{guest ? "Edit guest / family" : "Add guest / family"}</h2>
         <button
           className="ws-button"
           onClick={onClose}
@@ -440,19 +440,23 @@ export function InvitationPage({
       </div>
     );
   return (
-    <InvitationEditor
-      key={
-        guestId +
-        ":" +
-        query.data.guest.version +
-        ":" +
-        query.data.weddingVersion
-      }
-      draft={query.data}
-      data={data}
-      userId={userId}
-      onReload={() => query.refetch()}
-    />
+    <>
+      {query.data.access && (
+        <GuestAccessForm
+          key={guestId}
+          userId={userId}
+          guestId={guestId}
+          access={query.data.access}
+        />
+      )}
+      <InvitationEditor
+        key={guestId}
+        draft={query.data}
+        data={data}
+        userId={userId}
+        onReload={() => query.refetch()}
+      />
+    </>
   );
 }
 
@@ -529,6 +533,7 @@ function InvitationEditor({
   const blocked =
     mutation.isPending ||
     !draft.emailConfigured ||
+    Boolean(draft.access?.revoked) ||
     changedWedding ||
     (!notSent && !guest.canRetry) ||
     (notSent && (!validPreview || previewPending || preview.isError));
@@ -547,11 +552,8 @@ function InvitationEditor({
       </Link>
       <div className="dash-page-heading">
         <div>
-          <span className="dash-kicker">
-            A PERSONAL NOTE. A BEAUTIFUL BEGINNING.
-          </span>
           <h1>Send email invitation</h1>
-          <p>A warm welcome, with all the details your family needs.</p>
+          <p>Review the recipient and invitation details before sending.</p>
         </div>
         <span
           className={
@@ -562,6 +564,12 @@ function InvitationEditor({
           {mutation.isPending ? "Submitting…" : invitationLabels[guest.status]}
         </span>
       </div>
+      {draft.access?.revoked && (
+        <p className="invite-notice" role="status">
+          This family’s personal link is withdrawn. Re-enable it above before
+          sending or retrying the invitation.
+        </p>
+      )}
       {!draft.emailConfigured && (
         <p className="invite-notice" role="status">
           <Icon name="mail" />
@@ -735,9 +743,15 @@ function InvitationEditor({
                 <div>
                   <dt>Guest website</dt>
                   <dd>
-                    <Link to={"/w/" + wedding.publicId} target="_blank">
-                      Open wedding website ↗
-                    </Link>
+                    <a
+                      href={draft.access?.url || "/w/" + wedding.publicId}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      {draft.access?.url
+                        ? "Preview this family’s website ↗"
+                        : "Open public wedding website ↗"}
+                    </a>
                   </dd>
                 </div>
               </dl>
@@ -785,10 +799,7 @@ function InvitationEditor({
         </form>
         <aside className="invite-preview-panel" aria-label="Email preview">
           <div className="invite-preview-heading">
-            <span>
-              <i />
-              {notSent ? "LIVE EMAIL PREVIEW" : "SAVED EMAIL PREVIEW"}
-            </span>
+            <span>{notSent ? "Email preview" : "Saved email preview"}</span>
             <small>
               {notSent && !validPreview
                 ? "Complete subject and note to update"

@@ -4,67 +4,58 @@ import type { IconName } from "../../components/ui/Icon";
 const benefits: { icon: IconName; title: string; description: string }[] = [
   {
     icon: "calendar",
-    title: "One shared plan.",
-    description:
-      "From Mehendi to the reception, keep your dates, venues and family in sync.",
+    title: "Functions and venues",
+    description: "Keep Mehendi, Sangeet and reception details up to date.",
   },
   {
     icon: "people",
-    title: "Everyone in the loop.",
-    description:
-      "Family, helpers and service updates. A little less calling, a lot more clarity.",
+    title: "Department progress",
+    description: "See what’s done and which teams need your attention.",
   },
   {
     icon: "wallet",
-    title: "Expenses, kept private.",
-    description:
-      "Know what’s paid and what’s pending. Financial details stay with wedding organizers.",
+    title: "Expenses stay private",
+    description: "Only organizers can view service costs and pending dues.",
   },
 ];
 
 export function LoginStory() {
   return (
-    <aside className="login-story" aria-label="A calmer way to plan together">
-      <span className="login-story-flower" aria-hidden="true">
-        ✳
-      </span>
-      <span className="login-story-eyebrow">
-        <span className="status-dot" />
-        TWO FAMILIES. ONE BEAUTIFUL STORY.
-      </span>
-      <h2>
-        For your happily
-        <br />
-        <em>ever after.</em>
-      </h2>
-      <p className="login-story-intro">
-        The little rituals. The big feelings.
-        <br />
-        And all the people who make it yours.
-      </p>
-      <div className="login-benefits">
-        {benefits.map((benefit) => (
-          <div className="login-benefit" key={benefit.title}>
-            <span className="login-benefit-icon">
-              <Icon name={benefit.icon} />
-            </span>
-            <div>
-              <h3>{benefit.title}</h3>
-              <p>{benefit.description}</p>
+    <aside className="login-story" aria-label="Wedding planning features">
+      <figure className="login-story-photo">
+        <img
+          src="/images/stitch/ceremony-1.jpg"
+          alt="A wedding ceremony surrounded by loved ones"
+          width="640"
+          height="420"
+        />
+      </figure>
+      <div className="login-story-copy">
+        <h2>Your wedding workspace</h2>
+        <div className="login-benefits">
+          {benefits.map((benefit) => (
+            <div className="login-benefit" key={benefit.title}>
+              <span className="login-benefit-icon">
+                <Icon name={benefit.icon} />
+              </span>
+              <div>
+                <h3>{benefit.title}</h3>
+                <p>{benefit.description}</p>
+              </div>
             </div>
+          ))}
+        </div>
+        <div className="login-guest-note">
+          <span>
+            <Icon name="link" />
+          </span>
+          <div>
+            <h3>Invited as a guest?</h3>
+            <p>
+              Guests don’t need an account. Just open the invitation link shared
+              with you.
+            </p>
           </div>
-        ))}
-      </div>
-      <div className="login-guest-note">
-        <span>
-          <Icon name="link" />
-        </span>
-        <div>
-          <h3>Here to celebrate?</h3>
-          <p>
-            Guests don’t need an account. Just open the invitation link shared
-            with you.
-          </p>
         </div>
       </div>
     </aside>

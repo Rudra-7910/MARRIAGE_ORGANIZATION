@@ -1,5 +1,8 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { Link, useSearchParams } from "react-router-dom";
+import { Brand } from "../../components/ui/Brand";
+import { apiMessage } from "../../lib/api";
+import { getProviders, providerCategories } from "../../lib/providers";
 import { Icon } from "../../components/ui/Icon";
 import type { IconName } from "../../components/ui/Icon";
 import type { WeddingDetails } from "../../lib/weddings";
@@ -16,42 +19,42 @@ const categories: {
     name: "Catering",
     query: "wedding caterers",
     icon: "food",
-    description: "From the family favourites to the wedding feast.",
+    description: "Wedding menus, meal counters and catering teams.",
   },
   {
     id: "photography",
     name: "Photography",
     query: "wedding photographers",
     icon: "camera",
-    description: "For the little moments and the big memories.",
+    description: "Wedding photography and videography.",
   },
   {
     id: "decoration",
     name: "Decoration",
     query: "wedding decorators",
-    icon: "spark",
-    description: "Flowers, a mandap and a setting that feels like you.",
+    icon: "tent",
+    description: "Flowers, mandap decoration and stage setups.",
   },
   {
     id: "lighting",
     name: "Lighting",
     query: "wedding lighting services",
     icon: "tent",
-    description: "A little glow for every evening of celebration.",
+    description: "Lighting for the stage, venue and outdoor areas.",
   },
   {
     id: "tent",
     name: "Tent & Mandap",
     query: "wedding tent house mandap",
     icon: "tent",
-    description: "Make room for your people to come together.",
+    description: "Tents, mandaps and seating arrangements.",
   },
   {
     id: "music",
     name: "Music & Rituals",
     query: "wedding band shehnai services",
-    icon: "spark",
-    description: "The familiar sounds that make it a shaadi.",
+    icon: "music",
+    description: "Wedding bands, shehnai and ceremony services.",
   },
 ];
 
@@ -60,16 +63,15 @@ export function NearbyServices({ wedding }: { wedding: WeddingDetails }) {
     <section className="dash-nearby-section">
       <div className="dash-section-heading">
         <div>
-          <span className="dash-kicker">A LITTLE LOCAL KNOW-HOW</span>
-          <h2>Good people, close to your celebration.</h2>
-          <p>Explore wedding services near {wedding.city}.</p>
+          <h2>Find wedding services</h2>
+          <p>Venue location: {wedding.city}. Browse providers by category.</p>
         </div>
         <Link className="dash-inline-link" to="/app/services">
           Browse all services <Icon name="arrow" />
         </Link>
       </div>
       <div className="dash-nearby-grid">
-        {categories.slice(0, 4).map((category) => (
+        {categories.slice(0, 4).map((category, index) => (
           <Link
             key={category.id}
             to={"/app/services?category=" + category.id}
@@ -78,7 +80,7 @@ export function NearbyServices({ wedding }: { wedding: WeddingDetails }) {
             <img
               src={"/images/stitch/category-" + category.id + ".jpg"}
               alt=""
-              loading="lazy"
+              loading={index === 0 ? "eager" : "lazy"}
             />
             <div>
               <span>
@@ -94,144 +96,348 @@ export function NearbyServices({ wedding }: { wedding: WeddingDetails }) {
   );
 }
 
-export function ServicesPage({ wedding }: { wedding: WeddingDetails }) {
-  const initial = new URLSearchParams(window.location.search).get("category");
-  const [categoryId, setCategoryId] = useState(initial || "all");
-  const [search, setSearch] = useState("");
-  const savedLocation =
-    wedding.latitude !== null && wedding.longitude !== null
+export function ServicesPage({
+  wedding,
+}: {
+  wedding?: WeddingDetails;
+  userId?: string;
+}) {
+  const [params, setParams] = useSearchParams();
+  const selected = params.get("category") || "all";
+  const category = categories.some((item) => item.id === selected)
+    ? selected
+    : "all";
+  const sort = params.get("sort") === "newest" ? "newest" : "rating";
+  const page = Math.max(1, Math.floor(Number(params.get("page")) || 1));
+  const search = params.get("search") || "";
+  const filters = {
+    category,
+    sort,
+    page,
+    search,
+    latitude: wedding?.latitude ?? undefined,
+    longitude: wedding?.longitude ?? undefined,
+  };
+  const query = useQuery({
+    queryKey: ["provider-directory", filters],
+    queryFn: ({ signal }) => getProviders(filters, signal),
+  });
+  const savedLocation = wedding
+    ? wedding.latitude !== null && wedding.longitude !== null
       ? wedding.latitude + "," + wedding.longitude
-      : wedding.address + ", " + wedding.city;
-  const visible = categories.filter(
-    (category) =>
-      (categoryId === "all" || category.id === categoryId) &&
-      (category.name + " " + category.description)
-        .toLowerCase()
-        .includes(search.toLowerCase()),
-  );
+      : wedding.address + ", " + wedding.city
+    : "India";
+  const Page = wedding ? "section" : "main";
   return (
-    <>
-      <div className="dash-page-heading">
-        <div>
-          <span className="dash-kicker">
-            LOCAL PEOPLE. BEAUTIFUL CELEBRATIONS.
-          </span>
-          <h1>Find wedding services</h1>
-          <p>Caterers, photographers and more, around your wedding venue.</p>
+    <div
+      className={
+        "provider-directory" + (!wedding ? " provider-public-page" : "")
+      }
+    >
+      {!wedding && (
+        <header className="provider-site-header">
+          <Brand />
+          <Link className="ws-button" to="/app/provider">
+            List your service
+          </Link>
+        </header>
+      )}
+      <Page className={!wedding ? "provider-public-main" : undefined}>
+        <div className="dash-page-heading">
+          <div>
+            <h1>Find wedding services</h1>
+            <p>
+              {wedding
+                ? "Find providers by service and location, then contact them directly."
+                : "Browse registered wedding services, view reviews and contact providers."}
+            </p>
+          </div>
+          {wedding && (
+            <span className="dash-location">
+              <Icon name="pin" />
+              {wedding.city}
+            </span>
+          )}
         </div>
-        <span className="dash-location">
-          <Icon name="pin" />
-          {wedding.city}
-        </span>
-      </div>
-      <div className="dash-directory-note">
-        <Icon name="store" />
-        <div>
-          <strong>Discover nearby. Speak to them directly.</strong>
+        <div className="provider-directory-note">
+          <Icon name="store" />
           <p>
-            The in-app directory is coming soon. For now, each category opens a
-            Google Maps search using your saved wedding location. Images
-            illustrate service categories.
+            Profiles are shared by providers. Availability is informational;
+            confirm your date, scope and price directly before adding a service
+            to your wedding plan.
           </p>
         </div>
-        <span className="dash-badge">
-          <Icon name="lock" />
-          No bookings or payments
-        </span>
-      </div>
-      <div className="dash-service-toolbar">
-        <label className="dash-search">
-          <Icon name="search" />
-          <input
-            aria-label="Search service categories"
-            placeholder="What are you looking for?"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-          />
-        </label>
-        <span>
-          <Icon name="pin" />
-          Around {wedding.venue}
-        </span>
-      </div>
-      <div className="dash-tabs" aria-label="Service category filters">
-        {[{ id: "all", name: "All services" }, ...categories].map(
-          (category) => (
-            <button
-              key={category.id}
-              aria-pressed={categoryId === category.id}
-              className={categoryId === category.id ? "is-active" : ""}
-              onClick={() => setCategoryId(category.id)}
+        <form
+          className="provider-search-row"
+          onSubmit={(event) => {
+            event.preventDefault();
+            const next = new URLSearchParams(params);
+            next.set(
+              "search",
+              String(
+                new FormData(event.currentTarget).get("search") || "",
+              ).trim(),
+            );
+            next.delete("page");
+            setParams(next);
+          }}
+        >
+          <label className="provider-search">
+            <Icon name="search" />
+            <input
+              key={search}
+              name="search"
+              type="search"
+              maxLength={100}
+              aria-label="Search wedding services"
+              placeholder="Search by provider or city"
+              defaultValue={search}
+            />
+          </label>
+          <button className="ws-button" type="submit">
+            Search
+          </button>
+          <label className="provider-sort">
+            Sort by
+            <select
+              value={sort}
+              onChange={(event) => {
+                const next = new URLSearchParams(params);
+                next.set("sort", event.target.value);
+                next.delete("page");
+                setParams(next);
+              }}
             >
-              {category.name}
-            </button>
-          ),
+              <option value="rating">Highest rated</option>
+              <option value="newest">Recently listed</option>
+            </select>
+          </label>
+        </form>
+        <div
+          className="dash-tabs provider-categories"
+          aria-label="Service category filters"
+        >
+          {[{ id: "all", name: "All services" }, ...providerCategories].map(
+            (item) => (
+              <button
+                key={item.id}
+                aria-pressed={category === item.id}
+                className={category === item.id ? "is-active" : ""}
+                onClick={() => {
+                  const next = new URLSearchParams(params);
+                  next.set("category", item.id);
+                  next.delete("page");
+                  setParams(next);
+                }}
+              >
+                {item.name}
+              </button>
+            ),
+          )}
+        </div>
+        {wedding && (
+          <p className="provider-location-note">
+            <Icon name="pin" />
+            {wedding.latitude !== null && wedding.longitude !== null
+              ? "Showing providers who serve your saved wedding location."
+              : "Add coordinates in Wedding settings to find providers within their service area."}
+          </p>
         )}
-      </div>
-      <div className="dash-service-grid">
-        {visible.map((category) => (
-          <article className="dash-service-card" key={category.id}>
-            <div className="dash-service-image">
-              <img
-                src={"/images/stitch/category-" + category.id + ".jpg"}
-                alt=""
-                loading="lazy"
-              />
-              <span className="dash-badge">
-                <Icon name={category.icon} />
-                {category.name}
-              </span>
+        {query.isPending ? (
+          <div className="provider-state" role="status">
+            <Icon name="search" />
+            <h2>Finding wedding services…</h2>
+            <p>Opening the provider directory.</p>
+          </div>
+        ) : query.isError ? (
+          <div className="provider-state" role="alert">
+            <h2>Couldn’t open the directory</h2>
+            <p>{apiMessage(query.error)}</p>
+            <button className="ws-button" onClick={() => query.refetch()}>
+              Try again
+            </button>
+          </div>
+        ) : !query.data.providers.length ? (
+          <div className="provider-state">
+            <Icon name="store" />
+            <h2>
+              {search || category !== "all"
+                ? "No providers match this search"
+                : "No providers listed yet"}
+            </h2>
+            <p>
+              {search || category !== "all"
+                ? "Try another category or a broader search. You can also speak to a local service directly."
+                : "There are no published profiles for this location yet. Service providers can create a profile without registering a wedding."}
+            </p>
+            <div className="provider-actions">
+              {(search || category !== "all" || page > 1) && (
+                <button className="ws-button" onClick={() => setParams({})}>
+                  Clear filters
+                </button>
+              )}
+              <Link className="ws-button ws-primary" to="/app/provider">
+                List your service
+              </Link>
             </div>
-            <div className="dash-service-content">
-              <h2>
-                {category.name} near {wedding.city}
-              </h2>
-              <p>{category.description}</p>
-              <span className="dash-service-location">
-                <Icon name="pin" />
-                Near your saved wedding location
-              </span>
+          </div>
+        ) : (
+          <>
+            <div className="provider-result-heading">
+              <p>
+                {query.data.total}{" "}
+                {query.data.total === 1 ? "provider" : "providers"} found
+              </p>
+              <span>Reviews follow completed wedding services</span>
+            </div>
+            <div className="provider-results">
+              {query.data.providers.map((provider) => (
+                <article className="provider-result" key={provider.id}>
+                  <Link
+                    className="provider-result-image"
+                    to={"/services/" + provider.id}
+                    tabIndex={-1}
+                    aria-hidden="true"
+                  >
+                    <img
+                      src={
+                        provider.portfolioUrls[0] ||
+                        "/images/stitch/category-" + provider.category + ".jpg"
+                      }
+                      alt=""
+                      loading="lazy"
+                      referrerPolicy="no-referrer"
+                    />
+                    {!provider.portfolioUrls.length && (
+                      <span>Category image</span>
+                    )}
+                  </Link>
+                  <div className="provider-result-body">
+                    <span className="provider-category-name">
+                      {
+                        providerCategories.find(
+                          (item) => item.id === provider.category,
+                        )?.name
+                      }
+                    </span>
+                    <h2>
+                      <Link to={"/services/" + provider.id}>
+                        {provider.name}
+                      </Link>
+                    </h2>
+                    <p className="provider-result-city">
+                      <Icon name="pin" />
+                      {provider.city}
+                    </p>
+                    <p className="provider-result-description">
+                      {provider.description}
+                    </p>
+                    <p className="provider-rating">
+                      {provider.reviewCount > 0 ? (
+                        <>
+                          <strong>
+                            {provider.averageRating.toFixed(1)} / 5
+                          </strong>
+                          <span>
+                            {provider.reviewCount}{" "}
+                            {provider.reviewCount === 1 ? "review" : "reviews"}
+                          </span>
+                        </>
+                      ) : (
+                        <span>No reviews yet</span>
+                      )}
+                    </p>
+                    {provider.distanceKm !== undefined && (
+                      <p className="provider-distance">
+                        {provider.distanceKm.toFixed(1)} km from your wedding
+                        location
+                      </p>
+                    )}
+                    <div className="provider-result-bottom">
+                      <span>
+                        {provider.availability ||
+                          "Ask the provider about availability"}
+                      </span>
+                      <Link
+                        className="ws-button"
+                        to={"/services/" + provider.id}
+                      >
+                        View profile
+                      </Link>
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+            {query.data.total > query.data.pageSize && (
+              <nav className="provider-pagination" aria-label="Provider pages">
+                <button
+                  className="ws-button"
+                  disabled={page <= 1}
+                  onClick={() => {
+                    const next = new URLSearchParams(params);
+                    next.set("page", String(page - 1));
+                    setParams(next);
+                  }}
+                >
+                  Previous
+                </button>
+                <span>
+                  Page {page} of{" "}
+                  {Math.ceil(query.data.total / query.data.pageSize)}
+                </span>
+                <button
+                  className="ws-button"
+                  disabled={page * query.data.pageSize >= query.data.total}
+                  onClick={() => {
+                    const next = new URLSearchParams(params);
+                    next.set("page", String(page + 1));
+                    setParams(next);
+                  }}
+                >
+                  Next
+                </button>
+              </nav>
+            )}
+          </>
+        )}
+        <section className="provider-local-options">
+          <div>
+            <h2>Already know someone local?</h2>
+            <p>
+              Outside vendors can stay account-free. Keep their details in your
+              wedding plan.
+            </p>
+          </div>
+          {wedding ? (
+            <Link className="ws-button" to="/app/departments">
+              Teams & Services
+            </Link>
+          ) : (
+            <Link className="ws-button" to="/app/setup">
+              Open your wedding
+            </Link>
+          )}
+        </section>
+        <div className="provider-map-links">
+          <span>Explore more on Google Maps</span>
+          {categories
+            .filter((item) => category === "all" || item.id === category)
+            .map((item) => (
               <a
-                className="ws-button ws-primary"
+                key={item.id}
                 href={
                   "https://www.google.com/maps/search/?api=1&query=" +
-                  encodeURIComponent(category.query + " near " + savedLocation)
+                  encodeURIComponent(item.query + " near " + savedLocation)
                 }
                 target="_blank"
                 rel="noreferrer"
               >
-                Explore on Google Maps ↗
+                {item.name}
               </a>
-            </div>
-          </article>
-        ))}
-      </div>
-      {visible.length === 0 && (
-        <div className="dash-card dash-empty-section">
-          <Icon name="search" />
-          <h2>No matching service categories</h2>
-          <p>Try another search or choose All services.</p>
-          <button
-            className="ws-button"
-            onClick={() => {
-              setSearch("");
-              setCategoryId("all");
-            }}
-          >
-            Show all services
-          </button>
+            ))}
         </div>
-      )}
-      <div className="dash-bottom-note">
-        <Icon name="phone" />
-        <p>
-          Already know a local halwai, photographer or decorator? Keep their
-          number handy. Adding contacts to Teams & Services is the next step.
-        </p>
-        <Link to="/app/departments" className="dash-inline-link">
-          Teams & Services <Icon name="arrow" />
-        </Link>
-      </div>
-    </>
+      </Page>
+    </div>
   );
 }

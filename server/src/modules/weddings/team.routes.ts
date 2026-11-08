@@ -7,6 +7,7 @@ import { env } from "../../config/env.js";
 import { httpError } from "../../middleware/error-handler.js";
 import { checkCsrf, createSessionMiddleware } from "../auth/auth.session.js";
 import { User } from "../auth/user.model.js";
+import { requireUser } from "../../middleware/wedding-access.js";
 import {
   Wedding,
   canOrganize,
@@ -111,17 +112,8 @@ export function createTeamRouter() {
     "/weddings/current/team",
     "/weddings/current/team-invites",
     "/weddings/current/members",
-    "/weddings/current/budget",
   ];
-  router.use(privatePaths, createSessionMiddleware());
-  router.use(privatePaths, async (req, _res, next) => {
-    if (
-      !req.session.userId ||
-      !(await User.exists({ _id: req.session.userId }))
-    )
-      throw httpError(401, "UNAUTHENTICATED", "Please log in to continue.");
-    next();
-  });
+  router.use(privatePaths, createSessionMiddleware(), requireUser);
 
   router.get("/weddings/current/team", async (req, res) => {
     const userId = req.session.userId!;
@@ -416,11 +408,28 @@ export function createTeamRouter() {
           "You cannot remove that member. The wedding creator’s access is protected.",
         );
       const updated = await Wedding.updateOne(
-        { _id: wedding._id, __v: wedding.__v },
+        {
+          _id: wedding._id,
+          __v: wedding.__v,
+          "planning.version":
+            wedding.planning?.version === 0
+              ? { $in: [0, null] }
+              : wedding.planning?.version,
+        },
         {
           $pull: { members: { userId: id } },
-          $set: { "teamInvites.$[invite].revokedAt": new Date() },
-          $inc: { __v: 1 },
+          $set: {
+            "teamInvites.$[invite].revokedAt": new Date(),
+            "planning.departments": (
+              wedding.toObject().planning?.departments || []
+            ).map((department) => ({
+              ...department,
+              memberIds: department.memberIds.filter(
+                (member) => member.toString() !== id,
+              ),
+            })),
+          },
+          $inc: { __v: 1, "planning.version": 1 },
         },
         {
           arrayFilters: [
@@ -442,28 +451,5 @@ export function createTeamRouter() {
     },
   );
 
-  // Apply the finance guard before any budget response, including unknown subpaths.
-  router.use("/weddings/current/budget", async (req, _res, next) => {
-    const userId = req.session.userId!;
-    const wedding = await Wedding.findOne({ "members.userId": userId });
-    if (!wedding)
-      throw httpError(
-        409,
-        "WEDDING_REQUIRED",
-        "You do not belong to a wedding yet.",
-      );
-    if (!canOrganize(roleFor(wedding, req.session.userId!)))
-      throw httpError(
-        403,
-        "FORBIDDEN",
-        "Only this wedding’s admins and organizers can access the budget.",
-      );
-    next();
-  });
-  router.get("/weddings/current/budget", (_req, res) => {
-    res.json({
-      data: { available: false, message: "Budget tracking is coming soon." },
-    });
-  });
   return router;
 }

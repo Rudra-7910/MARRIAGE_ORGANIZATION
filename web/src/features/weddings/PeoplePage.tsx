@@ -68,7 +68,6 @@ export function PeoplePage({ userId }: { userId: string }) {
     <div className="team-page">
       <div className="dash-page-heading">
         <div>
-          <span className="dash-kicker">YOUR PEOPLE, TOGETHER</span>
           <h1>People & Access</h1>
           <p>Invite your family and helpers with the right wedding role.</p>
         </div>
@@ -102,7 +101,7 @@ export function PeoplePage({ userId }: { userId: string }) {
                     </strong>
                     {member.email && <p>{member.email}</p>}
                     {member.isCreator && (
-                      <small>Wedding creator · protected access</small>
+                      <small>Wedding creator. Protected access</small>
                     )}
                   </div>
                   <span className="dash-badge">{member.role}</span>

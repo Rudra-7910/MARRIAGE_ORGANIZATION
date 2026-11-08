@@ -16,13 +16,18 @@
     "dev:server": "npm run dev --workspace server",
     "build": "npm run build --workspace web && npm run build --workspace server",
     "start": "npm run start --workspace server",
+    "release:check": "node server/dist/scripts/check-production.js",
     "typecheck": "npm run typecheck --workspace web && npm run typecheck --workspace server",
     "test": "npm run test --workspace server && npm run test --workspace web",
+    "test:e2e": "playwright test",
+    "test:production": "node e2e/production-smoke.mjs",
     "check": "npm run typecheck && npm test && npm run build"
   },
   "devDependencies": {
+    "@playwright/test": "^1.65.0",
     "@types/node": "^22.20.5",
     "concurrently": "^9.2.5",
+    "mongodb-memory-server": "^11.3.0",
     "typescript": "^5.9.3"
   }
 }

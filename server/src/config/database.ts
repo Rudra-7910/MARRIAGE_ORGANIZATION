@@ -2,6 +2,9 @@ import mongoose from "mongoose";
 import { Family, Wedding } from "../modules/weddings/wedding.models.js";
 import { User } from "../modules/auth/user.model.js";
 import { Guest } from "../modules/invitations/invitation.model.js";
+import { TranslationCache } from "../modules/integrations/integration.routes.js";
+import { Provider, Review } from "../modules/providers/provider.models.js";
+import { Photo, UploadGrant } from "../modules/media/media.models.js";
 import { env } from "./env.js";
 
 let initialized = false;
@@ -26,6 +29,11 @@ export async function connectDatabase() {
     await Family.createIndexes();
     await Wedding.createIndexes();
     await Guest.createIndexes();
+    await Provider.createIndexes();
+    await Review.createIndexes();
+    await Photo.createIndexes();
+    await UploadGrant.createIndexes();
+    await TranslationCache.createIndexes();
     initialized = true;
     console.info(
       "[database] Connected to MongoDB; required indexes are ready.",

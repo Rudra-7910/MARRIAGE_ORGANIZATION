@@ -1,18 +1,28 @@
+import { lazy } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Navigate } from "react-router-dom";
-import { getCurrentUser } from "../../lib/api";
-import { AccountRoutes } from "../weddings/WeddingApp";
+import { Navigate, Outlet, useLocation } from "react-router-dom";
+import { accountPathFromState, getCurrentUser } from "../../lib/api";
+import { inviteTokenFromState } from "../../lib/team";
+const AccountRoutes = lazy(() =>
+  import("../weddings/WeddingApp").then((module) => ({
+    default: module.AccountRoutes,
+  })),
+);
 
-export function AuthGate() {
+export function AuthGate({ guestOnly = false }: { guestOnly?: boolean }) {
+  const location = useLocation();
   const query = useQuery({
     queryKey: ["auth-user"],
     queryFn: getCurrentUser,
     staleTime: 0,
+    refetchOnMount: "always",
   });
-  if (query.isPending)
+  // Verify the session on entry even when an old user/null is cached. Later
+  // background refreshes must not unmount the workspace and reconnect sockets.
+  if (query.isPending || !query.isFetchedAfterMount)
     return (
       <main className="ws-empty" role="status">
-        <h1>Opening your workspace…</h1>
+        <h1>Checking your session…</h1>
       </main>
     );
   if (query.isError)
@@ -25,6 +35,29 @@ export function AuthGate() {
         </button>
       </main>
     );
-  if (!query.data) return <Navigate to="/login" replace />;
+  if (guestOnly) {
+    if (!query.data) return <Outlet />;
+    const invitation = inviteTokenFromState(location.state);
+    return (
+      <Navigate
+        to={
+          invitation
+            ? "/team-invites#" + invitation
+            : accountPathFromState(location.state)
+        }
+        replace
+      />
+    );
+  }
+  if (!query.data)
+    return (
+      <Navigate
+        to="/login"
+        replace
+        state={{
+          returnTo: location.pathname + location.search + location.hash,
+        }}
+      />
+    );
   return <AccountRoutes key={query.data.id} user={query.data} />;
 }

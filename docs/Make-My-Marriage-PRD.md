@@ -1,5 +1,13 @@
 # Make My Marriage — Product Requirements Document
 
+> **Production build update — 8 November 2026:** V1 features are implemented as described in [V1 completion](V1-Completion.md). Password recovery, organizer finance overview, production frontend serving/security logs and browser/CI checks are included. [Deployment/configuration and live verification](Production-Release.md) remain operator launch steps; no paid AWS compute or public deployment has been provisioned. No signup email verification, queue, bulk/scheduled email or booking workflow is added.
+
+> **Storage update — 6 November 2026:** Photo storage now uses one private **Amazon S3** bucket, replacing the earlier Cloudflare R2 choice. The existing staging, processing, organizer approval and signed-download flow is unchanged. AWS SDK credentials come from a local profile or deployment IAM role. See [AWS S3 setup](AWS-S3-Setup.md). This update supersedes historical R2 references below.
+
+> **Implementation update — 6 November 2026:** The remaining V1 modules are implemented: organizer-only budget/expenses and idempotent manual payments; scoped family invitations and published guest updates; private R2 QR uploads, Sharp processing, organizer moderation and approved gallery; registered providers, geo search, informational availability, linked completed-service reviews and explicit platform moderation; optional Google Places ID linking/Hindi common-interface labels; session-authorized Socket.IO query refresh. See [implemented V1 flows and setup](V1-Completion.md) for exact behavior, limits and remaining credential/cloud setup. Scheduling, bulk email, queues/BullMQ and automated reminders are V2. This amendment supersedes historical proposed routes/workers/media layouts below.
+
+
+
 Version: 1.4 · Updated: 29 October 2026 · Status: Product baseline with incremental implementation
 
 ## 1. Product summary
@@ -36,7 +44,7 @@ This document records the product scope. Account/family/wedding setup, the dashb
 - Dress guidance, ceremony instructions, or required items for guests.
 - Microservices, seat locking, or complex recommendation systems.
 
-## 3. Explicit assumptions awaiting confirmation
+## 3. Historical assumptions (subject to the implementation amendment above)
 
 These defaults allow planning to proceed; they are not represented as confirmed user decisions.
 
@@ -108,7 +116,7 @@ Membership removal must revoke API and Socket.IO access. Authenticated users lac
 - Group related reasons on a service's attention card to avoid duplicate clutter.
 - Show attention items immediately in the dashboard; email scheduling does not delay their visibility.
 
-### FR4 — Scheduled organizer summaries
+### FR4 — Scheduled organizer summaries (V2; not part of current implementation)
 
 - Under A3, evaluate unresolved attention items 7, 4, and 1 calendar days before the main wedding date, at 09:00 in the wedding timezone; default timezone Asia/Kolkata.
 - Send at most one consolidated summary per organizer per scheduled checkpoint, only when unresolved items exist.
@@ -155,7 +163,7 @@ Membership removal must revoke API and Socket.IO access. Authenticated users lac
 - Save the exact email before the provider request. Statuses: Not sent, Submitting, Submitted, Failed and Unconfirmed. Submitted means accepted by Resend, not delivered to an inbox. No delivery/open tracking in current V1.
 - Concurrent sends are deduplicated per guest using an atomic version claim and provider idempotency key. Failed/uncertain outcomes have a deliberate safe retry where possible. Unknown attempts outside the provider's safe key window are blocked for investigation rather than blindly resent.
 - One submitted invitation per family entry in V1. Rejected entries can be corrected; submitted/uncertain content is locked so retries preserve the same payload. Updating the wedding updates the linked website; it does not rewrite previously sent email.
-- The public wedding link exposes public wedding information only; no private guest database. Guest-specific ceremony grants/revocation, invitation image uploads and campaign controls are not implemented by this increment.
+- The public wedding link exposes public wedding information only; no private guest database. Personal function grants/revocation are implemented. Invitation image customization and bulk campaign controls remain outside this increment.
 - V2: bulk campaigns, queues/BullMQ, scheduling, automated retries/reminders and delivery webhooks. WhatsApp delivery is excluded from current V1.
 
 ### FR9 — Guest website and announcements

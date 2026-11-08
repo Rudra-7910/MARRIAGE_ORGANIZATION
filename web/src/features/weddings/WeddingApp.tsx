@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { apiMessage } from "../../lib/api";
 import {
   Link,
@@ -24,18 +25,19 @@ import { WeddingOverview } from "./WeddingOverview";
 import { PeoplePage } from "./PeoplePage";
 import { ServicesPage } from "./ServicesPage";
 import { GuestsPage, InvitationPage } from "./InvitationsPage";
-import {
-  BudgetPage,
-  FunctionsPage,
-  GuestWebsitePage,
-  PhotosPage,
-  TeamsPage,
-} from "./WorkspacePages";
+import { FunctionsPage } from "./FunctionsPage";
+import { TeamsPage } from "./TeamsPage";
+import { BudgetPage } from "./BudgetPage";
+import { PhotosPage } from "./PhotosPage";
+import { AnnouncementsPage } from "./AnnouncementsPage";
+import { GuestWebsitePage } from "./GuestWebsitePage";
+import { ProviderAccountPage } from "../providers/ProviderAccountPage";
 
 export function AccountRoutes({ user }: { user: AuthUser }) {
   return (
     <Routes>
       <Route path="setup" element={<SetupPage user={user} />} />
+      <Route path="provider" element={<ProviderAccountPage user={user} />} />
       <Route path="*" element={<WeddingWorkspace user={user} />} />
     </Routes>
   );
@@ -54,7 +56,16 @@ function WeddingWorkspace({ user }: { user: AuthUser }) {
     refetchIntervalInBackground: false,
     refetchOnWindowFocus: !editing,
   });
-  if (signedOut(query.error)) return <Navigate to="/login" replace />;
+  if (signedOut(query.error))
+    return (
+      <Navigate
+        to="/login"
+        replace
+        state={{
+          returnTo: location.pathname + location.search + location.hash,
+        }}
+      />
+    );
   if (needsSetup(query.error)) return <Navigate to="/app/setup" replace />;
   if (query.isPending)
     return (
@@ -99,12 +110,23 @@ function WeddingWorkspace({ user }: { user: AuthUser }) {
           path="overview"
           element={<WeddingOverview data={data} userId={user.id} />}
         />
-        <Route path="functions" element={<FunctionsPage data={data} />} />
-        <Route path="departments" element={<TeamsPage />} />
+        <Route
+          path="functions"
+          element={<FunctionsPage data={data} userId={user.id} />}
+        />
+        <Route path="departments" element={<TeamsPage userId={user.id} />} />
+        <Route
+          path="attention"
+          element={<TeamsPage key="attention" userId={user.id} attentionOnly />}
+        />
         <Route
           path="budget"
           element={
-            organizer ? <BudgetPage /> : <Navigate to="/app/overview" replace />
+            organizer ? (
+              <BudgetPage userId={user.id} />
+            ) : (
+              <Navigate to="/app/overview" replace />
+            )
           }
         />
         <Route
@@ -129,9 +151,22 @@ function WeddingWorkspace({ user }: { user: AuthUser }) {
         />
         <Route
           path="services"
-          element={<ServicesPage wedding={data.wedding} />}
+          element={<ServicesPage wedding={data.wedding} userId={user.id} />}
         />
-        <Route path="photos" element={<PhotosPage />} />
+        <Route
+          path="photos"
+          element={<PhotosPage userId={user.id} data={data} />}
+        />
+        <Route
+          path="announcements"
+          element={
+            organizer ? (
+              <AnnouncementsPage userId={user.id} />
+            ) : (
+              <Navigate to="/app/overview" replace />
+            )
+          }
+        />
         <Route
           path="guest-website"
           element={<GuestWebsitePage data={data} />}
@@ -151,14 +186,16 @@ function EditWedding({
   userId,
 }: {
   data: Workspace;
-  onReload: () => void;
+  onReload: () => Promise<{ data?: Workspace }>;
   userId: string;
 }) {
   const cache = useQueryClient();
   const navigate = useNavigate();
   const wedding = data.wedding!;
+  const [editVersion, setEditVersion] = useState(wedding.version);
+  const [formKey, setFormKey] = useState(0);
   const mutation = useMutation({
-    mutationFn: (values: WeddingInput) => editWedding(values, wedding.version),
+    mutationFn: (values: WeddingInput) => editWedding(values, editVersion),
     onSuccess: async (next) => {
       cache.setQueryData(["wedding-dashboard", userId], next);
       cache.setQueryData(["wedding-setup", userId], next);
@@ -172,7 +209,6 @@ function EditWedding({
     <>
       <div className="dash-page-heading">
         <div>
-          <span className="dash-kicker">YOUR PLANS CAN GROW WITH YOU</span>
           <h1>Wedding settings</h1>
           <p>Edit the details shared by your dashboard and guest website.</p>
         </div>
@@ -181,13 +217,19 @@ function EditWedding({
         </Link>
       </div>
       <WeddingForm
-        key={wedding.version}
+        key={formKey}
         initial={wedding}
         editing
         onSave={(values) => mutation.mutate(values)}
         saving={mutation.isPending}
         error={mutation.isError ? apiMessage(mutation.error) : undefined}
-        onReload={onReload}
+        onReload={async () => {
+          const refreshed = await onReload();
+          if (refreshed.data?.wedding) {
+            setEditVersion(refreshed.data.wedding.version);
+            setFormKey((value) => value + 1);
+          }
+        }}
       />
     </>
   );

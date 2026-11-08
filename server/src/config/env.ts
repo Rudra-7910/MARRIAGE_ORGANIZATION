@@ -1,6 +1,7 @@
 import path from "node:path";
 import { isIP } from "node:net";
 import dotenv from "dotenv";
+import { z } from "zod";
 
 // Resolve server/.env from this file, so commands also work from the repo root.
 const envFile = path.resolve(import.meta.dirname, "../../.env");
@@ -31,6 +32,12 @@ if (
 const sessionSecret = process.env.SESSION_SECRET || "";
 if (sessionSecret.length < 32)
   throw new Error("SESSION_SECRET must have at least 32 characters.");
+if (process.env.LINK_SECRET && process.env.LINK_SECRET.length < 32) {
+  throw new Error("LINK_SECRET must have at least 32 characters when set.");
+}
+if (nodeEnv === "production" && !process.env.LINK_SECRET) {
+  throw new Error("Set a separate, stable LINK_SECRET before production.");
+}
 const appOrigin = process.env.APP_ORIGIN || "http://127.0.0.1:3000";
 const parsedOrigin = new URL(appOrigin);
 if (
@@ -42,6 +49,18 @@ if (
   );
 if (nodeEnv === "production" && parsedOrigin.protocol !== "https:")
   throw new Error("Production APP_ORIGIN must use HTTPS.");
+for (const name of ["PRIVACY_POLICY_URL", "TERMS_URL"]) {
+  if (
+    process.env[name] &&
+    !z.url({ protocol: /^https$/ }).safeParse(process.env[name]).success
+  )
+    throw new Error(name + " must be an HTTPS URL.");
+}
+if (
+  process.env.SUPPORT_EMAIL &&
+  !z.email().safeParse(process.env.SUPPORT_EMAIL).success
+)
+  throw new Error("SUPPORT_EMAIL must be a valid email address.");
 
 // In local development these two names reach the same Vite server.
 // Production always accepts only the exact configured origin.
@@ -86,7 +105,23 @@ export const env = {
   host: process.env.HOST || "127.0.0.1",
   mongoUri,
   sessionSecret,
+  linkSecret: process.env.LINK_SECRET || sessionSecret,
+  awsRegion: (
+    process.env.AWS_REGION ||
+    process.env.AWS_DEFAULT_REGION ||
+    ""
+  ).trim(),
+  s3Bucket: (process.env.S3_BUCKET || "").trim(),
+  googlePlacesApiKey: process.env.GOOGLE_PLACES_API_KEY || "",
+  googleTranslationApiKey: process.env.GOOGLE_TRANSLATION_API_KEY || "",
+  moderatorIds: (process.env.PLATFORM_MODERATOR_USER_IDS || "")
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean),
   appOrigin,
+  supportEmail: (process.env.SUPPORT_EMAIL || "").trim(),
+  privacyPolicyUrl: (process.env.PRIVACY_POLICY_URL || "").trim(),
+  termsUrl: (process.env.TERMS_URL || "").trim(),
   allowedOrigins,
   trustedProxies,
   // Optional until invitations are enabled. These values never go to the browser.

@@ -5,7 +5,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { signup } from "../lib/api";
+import { accountPathFromState, signup } from "../lib/api";
 import { Brand } from "../components/ui/Brand";
 import { Icon } from "../components/ui/Icon";
 import { LoginStory } from "../features/auth/LoginStory";
@@ -69,6 +69,7 @@ export function SignupPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const teamInviteToken = inviteTokenFromState(location.state);
+  const returnTo = accountPathFromState(location.state);
   const queryClient = useQueryClient();
   const {
     register,
@@ -81,7 +82,7 @@ export function SignupPage() {
       queryClient.clear();
       queryClient.setQueryData(["auth-user"], user);
       navigate(
-        teamInviteToken ? "/team-invites#" + teamInviteToken : "/app/setup",
+        teamInviteToken ? "/team-invites#" + teamInviteToken : returnTo,
         { replace: true },
       );
     },
@@ -95,7 +96,6 @@ export function SignupPage() {
             Back to home
           </Link>
           <Brand />
-          <span className="login-header-note">A LITTLE MORE TOGETHER.</span>
         </div>
       </header>
       <main className="login-main page-container">
@@ -104,13 +104,10 @@ export function SignupPage() {
             className="login-form-panel"
             aria-labelledby="signup-heading"
           >
-            <span className="eyebrow">
-              FOR THE PEOPLE BRINGING IT ALL TOGETHER
-            </span>
-            <h1 id="signup-heading">A beautiful beginning.</h1>
+            <h1 id="signup-heading">Create your account</h1>
             <p className="login-intro">
-              Couple, sibling, friend or parent — anyone helping plan the
-              wedding can get started.
+              Couple, sibling, friend or parent, anyone helping plan the wedding
+              can get started.
             </p>
             <form
               className="login-form"
@@ -185,15 +182,15 @@ export function SignupPage() {
               )}
               <p className="login-session-note">
                 {teamInviteToken
-                  ? "No email verification needed. Next, review and accept your wedding team invitation."
-                  : "No email verification needed for v1. Next, register your family and create your wedding."}
+                  ? "Next, review and accept your wedding team invitation."
+                  : "Next, add your family and wedding details."}
               </p>
             </form>
             <div className="login-create-account">
               <span>Already have an account?</span>
               <Link
                 to="/login"
-                state={teamInviteToken ? { teamInviteToken } : undefined}
+                state={teamInviteToken ? { teamInviteToken } : { returnTo }}
               >
                 Log in
                 <Icon name="arrow" />

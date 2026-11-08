@@ -1,5 +1,119 @@
 # Make My Marriage — API Design
 
+## Production release additions — 8 November 2026
+
+All paths are relative to `/api/v1`.
+
+| Method | Path | Contract |
+|---|---|---|
+| POST | `/auth/forgot-password` | CSRF + rate limits; `{email}`; same generic response for unknown/matching accounts. At most one recovery email per account per five minutes. Resend must be configured. |
+| POST | `/auth/reset-password` | CSRF + rate limits; `{token,password}`. The 256-bit token arrives from `/reset-password#token`, has a 15-minute lifetime, is stored hashed and is consumed atomically. Success revokes existing HTTP/socket sessions and requires explicit login. |
+| GET | `/weddings/current/budget/summary` | This wedding's Admin/Organizer only. `{version,currency,budgetPaise,totals}`; no expense rows, payment history or audit payload. Workers/Managers receive 403. |
+| GET | `/site-info` | Only published support email/privacy URL/terms URL. No credentials or provider configuration is exposed. |
+| GET | `/health` | Readiness alias; 200 only after Mongo/index initialization, otherwise 503. `/health/live` remains independent liveness. |
+
+Production Express also serves the built React application and assets. Unknown API paths return JSON 404, even when the request accepts HTML. See [production release setup](Production-Release.md).
+
+> **Storage update — 6 November 2026:** Photo storage now uses one private **Amazon S3** bucket, replacing the earlier Cloudflare R2 choice. The existing staging, processing, organizer approval and signed-download flow is unchanged. AWS SDK credentials come from a local profile or deployment IAM role. See [AWS S3 setup](AWS-S3-Setup.md). This update supersedes historical R2 references below.
+
+## Implemented remaining V1 APIs — 6 November 2026
+
+These routes and [V1 flows/configuration](V1-Completion.md) supersede older proposed finance, media, provider, guest-scope and translation endpoints below. Base prefix `/api/v1`; success envelopes are `{data:...}`. All staff writes require the session cookie and `X-CSRF-Token`; token-authorized guest upload/resolve POSTs do not require a staff session. Errors use the existing JSON error envelope. All IDs and payloads are validated with Zod. Stale saves return 409; role failures 403; missing sessions 401.
+
+| Method | Path | Access and effect |
+|---|---|---|
+| GET | `/weddings/current/budget` | Admin/Organizer; private finance, totals, departments, audit |
+| PATCH | `/weddings/current/budget` | Organizer; versioned command below |
+| GET | `/weddings/current/announcements` | Organizer; all drafts/published updates and site version |
+| PATCH | `/weddings/current/announcements` | Organizer; `{action:add/edit/remove,version,id?,values?}` |
+| PATCH | `/weddings/current/guests/:id/access` | Organizer; `{version,functionIds,revoked}` → current version/link |
+| GET | `/public/weddings/:publicId/announcements` | Public; published public updates only |
+| POST | `/public/weddings/:publicId/invitation` | `{token}` in JSON; personal functions and relevant published updates; invalid/withdrawn links fail closed |
+| GET | `/weddings/current/photos?state=approved&page=1` | Current member; organizers may also choose pending/rejected; 24 per page |
+| POST | `/weddings/current/upload-links` | Organizer; `{days:1..365,limit:1..1000}` → derived URL/QR/expiry/quota |
+| GET | `/weddings/current/upload-links/:id` | Organizer; current link details and on-demand QR |
+| DELETE | `/weddings/current/upload-links/:id` | Organizer; revoke link |
+| PATCH | `/weddings/current/photos/:id` | Organizer; `{action:approve/reject/unpublish,version}` |
+| POST | `/uploads/info` | `{token,publicId}` → safe wedding names, expiry, remaining authorizations, maxBytes/configuration |
+| POST | `/uploads/authorize` | `{token,publicId,name,type,size}` → reserved ID, signed PUT URL, headers |
+| POST | `/uploads/:id/authorize` | `{token,publicId}` → renew same uncompleted PUT without another quota slot |
+| POST | `/uploads/:id/complete` | `{token,publicId}` → validated private Pending image; idempotent after success |
+| GET | `/public/weddings/:publicId/photos?page=1` | Approved-only gallery, 24 per page |
+| GET | `/public/photos/:id/content` | Recheck approval, redirect to 60-second private-bucket signed GET |
+| GET | `/public/photos/:id/download` | Same approval check, attachment filename |
+| GET | `/providers?category=all&sort=rating&page=1&search=` | Public registered-directory page; optional paired latitude/longitude |
+| GET | `/providers/me` | Session only, no wedding required; own profile and explicit moderator eligibility |
+| PUT | `/providers/me` | Session/CSRF; create version0 or update with expected version |
+| GET | `/providers/:id` | Published/non-hidden profile, visible reviews, caller review eligibility |
+| POST | `/providers/:id/add-to-wedding` | Organizer; `{}` creates one linked Outside vendor department; no membership/booking |
+| POST | `/providers/:id/reviews` | Eligible organizer; `{departmentId,rating:1..5,text}`; one per completed linked service |
+| PATCH | `/providers/:id/reviews/:reviewId` | Original eligible author; `{version,rating,text}` |
+| GET | `/moderation` | Explicit platform moderator; latest 100 profiles and reviews |
+| PATCH | `/moderation/providers/:id` | Platform moderator; `{hidden,reason}` |
+| PATCH | `/moderation/reviews/:id` | Platform moderator; `{hidden,reason}` |
+| GET | `/integrations/places?search=` | Session; optional Google Places search, 3–100 characters, up to 5 transient results |
+| GET | `/interface-labels/hi` | Optional fixed common-interface label catalog; no arbitrary text input; 24-hour Mongo cache |
+
+### Finance commands
+
+All commands include `version`. Amounts are integer INR **paise**, not rupees/floating-point values.
+
+| Action | Additional payload |
+|---|---|
+| `setBudget` | `budgetPaise: integer or null` |
+| `addExpense` | `values:{title,departmentId:null or ID,agreedPaise,notes}` |
+| `editExpense` | `expenseId,values` |
+| `voidExpense` | `expenseId,reason` |
+| `recordPayment` | `expenseId,idempotencyKey:UUID,amountPaise,paidOn:YYYY-MM-DD,note` |
+| `voidPayment` | `expenseId,paymentId,reason` |
+
+Finance reads/updates return `{data:{version,currency:'INR',budgetPaise,totals,departments,expenses,audit}}`. Record-payment responses additionally return `{receipt,replayed}` at the envelope's top level. A same-key/same-payload retry returns the immutable original receipt and current ledger; different payload/key reuse fails. Void preserves history/reason/actor.
+
+Announcements `values` are `{title,text,scope:'public'|'functions',functionIds,published}`. Function-scoped updates need at least one valid wedding function. Profile bodies are `{version,name,category,description,phone,address,city,latitude,longitude,googlePlaceId?,serviceRadiusKm,availability,portfolioUrls,published}`. Categories: catering, photography, decoration, lighting, tent, music. Portfolio links are HTTPS; the backend never fetches arbitrary portfolio URLs. Place selection stores only `googlePlaceId`; permanent venue/address/GPS fields are user-entered.
+
+### Live events
+
+Socket.IO uses the same session cookie. No client-chosen wedding room is accepted. After successful authorized REST writes, `workspace:changed` carries only `{resource:'finance'|'guests'|'workspace'}`. Finance/guest changes target organizer rooms, not workers. The browser refetches through ordinary authorized APIs. Removal/logout disconnects affected sockets; periodic checks reload persisted sessions. No budget/guest objects or bearer links are broadcast.
+
+
+## Implemented planning API — 3 November 2026
+
+This section describes the working planning batch and takes precedence over older proposed planning endpoints below.
+
+| Method | Path after `/api/v1` | Access | Response |
+|---|---|---|---|
+| GET | `/weddings/current/planning` | Current wedding member | Plan version, functions, department summaries and permitted details |
+| PATCH | `/weddings/current/planning` | Session + CSRF + action/department scope | Updated safe plan after one atomic write |
+| GET | `/public/weddings/:publicId/functions` | No login | Only explicitly published additional functions; no planning notes or membership data |
+
+Planning mutations send `{ "action": "...", "version": 0, ... }`. Use the version returned by the last read/save. The server validates the discriminated command with Zod, looks up the current wedding through membership, checks role/department access, and writes the bounded planning section with matching planning and wedding versions. A stale save or changed access returns HTTP 409 `PLANNING_CONFLICT`; the client preserves the draft and offers reload. Nothing is sent through email or a queue by these endpoints.
+
+| Action | Additional payload | Permission |
+|---|---|---|
+| `addFunction` | `values` | Admin/Organizer |
+| `editFunction` | `id`, `values` | Admin/Organizer |
+| `removeFunction` | `id` | Admin/Organizer |
+| `addDepartment` | `values` | Admin/Organizer |
+| `editDepartment` | `id`, `values` | Admin/Organizer |
+| `removeDepartment` | `id` | Admin/Organizer |
+| `applyTemplate` | None | Admin/Organizer |
+| `updateSettings` | `staleAfterDays` (1–30) | Admin/Organizer |
+| `updateWork` | `id`, `status`, `note`, `onBehalf` | Organizer or assigned staff; on-behalf organizer-only |
+| `addChecklistItem` | `id`, `title` | Organizer or assigned staff |
+| `updateChecklistItem` | `id`, `itemId`, `status` | Organizer or assigned staff |
+| `removeChecklistItem` | `id`, `itemId` | Admin/Organizer |
+| `raiseAttention` | `id`, `reason` | Organizer or assigned staff |
+| `resolveAttention` | `id` | Admin/Organizer |
+
+Function values: `name`, `startsAt`, `endsAt`, `venue`, `address`, `city`, `guestVisible`. Times are local IST strings `YYYY-MM-DDTHH:MM`, with no `Z` or offset suffix. End must follow start. Additional functions cannot overlap each other or a known main ceremony interval. Without a main end time only its start instant is checked. Ceremony edits in `/weddings/current` check the current additional functions too.
+
+Department values: `name`, `kind` (`Family team` or `Outside vendor`), `contactRole`, `phone`, `notes`, `deadline` (empty or local IST datetime), `memberIds` (unique members of this wedding). No vendor account is created. Work status is exactly `To do`, `In progress`, or `Done`.
+
+The response includes `canManage`, per-department `canEdit`, checklist completion counts, meaningful progress timestamp, deadline, grouped attention reasons, and unresolved manual flag state. Unassigned staff do not receive `notes`, `memberIds`, `checklist`, or `updates`, and receive a generic manual-flag label instead of its explanation. Assigned staff and organizers receive those details; updates contain actor/time/on-behalf information. Removing a wedding member atomically clears department assignments and invalidates the planning version.
+
+Limits: 50 additional functions, 40 departments, 100 checklist entries per department, 30 retained update records per department. Starter insertion is explicit and skips existing department names. Public visibility is a whole-wedding website toggle; per-family function tokens remain future work. The original public wedding response stays unchanged; additional functions have their own public allowlist.
+
+
 Version 1.1 · Updated 29 October 2026 · Status: Implementation notes plus broader planning draft
 
 The tables A01–A59 retain **59 proposed REST endpoints** from the broader product discussion. They are not a count of implemented APIs. Authentication, health, family/wedding setup, dashboard and public wedding reads are implemented; the seven invitation endpoints below are now implemented. The current API uses `/weddings/current` for private wedding scope, derived from the signed-in account. Proposed `/app/weddings/:wid` routes below should not be used as current integration instructions.

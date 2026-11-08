@@ -1,4 +1,7 @@
-import { useState } from "react";
+import { LanguageToggle } from "../integrations/LanguageToggle";
+import { LiveUpdates } from "../integrations/LiveUpdates";
+import { useTranslation } from "react-i18next";
+import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -19,6 +22,7 @@ const navigation: {
   { path: "overview", label: "Overview", icon: "dashboard" },
   { path: "functions", label: "Functions", icon: "calendar" },
   { path: "departments", label: "Teams & Services", icon: "people" },
+  { path: "attention", label: "Need Your Attention", icon: "flag" },
   {
     path: "budget",
     label: "Budget & Expenses",
@@ -26,6 +30,12 @@ const navigation: {
     organizer: true,
   },
   { path: "guests", label: "Guests & Invites", icon: "mail", organizer: true },
+  {
+    path: "announcements",
+    label: "Guest updates",
+    icon: "message",
+    organizer: true,
+  },
   { path: "services", label: "Find Services", icon: "store" },
   { path: "photos", label: "Photos", icon: "camera" },
   { path: "guest-website", label: "Guest Website", icon: "globe" },
@@ -40,7 +50,19 @@ export function DashboardLayout({
   data: Workspace;
   children: ReactNode;
 }) {
+  const { t } = useTranslation();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [mobileNavigation, setMobileNavigation] = useState(false);
+  useEffect(() => {
+    const screen = window.matchMedia("(max-width: 960px)");
+    function updateNavigation() {
+      setMobileNavigation(screen.matches);
+      if (!screen.matches) setMenuOpen(false);
+    }
+    updateNavigation();
+    screen.addEventListener("change", updateNavigation);
+    return () => screen.removeEventListener("change", updateNavigation);
+  }, []);
   const navigate = useNavigate();
   const cache = useQueryClient();
   const wedding = data.wedding!;
@@ -60,6 +82,7 @@ export function DashboardLayout({
         if (event.key === "Escape") setMenuOpen(false);
       }}
     >
+      <LiveUpdates userId={user.id} />
       <a className="skip-link" href="#dashboard-content">
         Skip to dashboard
       </a>
@@ -72,14 +95,15 @@ export function DashboardLayout({
       )}
       <aside
         id="dashboard-sidebar"
+        inert={mobileNavigation && !menuOpen}
         className={"dash-sidebar" + (menuOpen ? " is-open" : "")}
       >
         <div className="dash-brand">
           <Brand />
-          <span>FAMILY WORKSPACE</span>
+          <span>Family workspace</span>
         </div>
         <div className="dash-wedding-switcher">
-          <span className="dash-tiny-label">YOUR WEDDING</span>
+          <span className="dash-tiny-label">Your wedding</span>
           <strong>
             {wedding.brideName} & {wedding.groomName}
           </strong>
@@ -102,7 +126,7 @@ export function DashboardLayout({
                 key={item.path}
               >
                 <Icon name={item.icon} />
-                <span>{item.label}</span>
+                <span>{t(item.label)}</span>
                 {item.path === "services" && <small>Nearby</small>}
                 {item.organizer && (
                   <Icon name="lock" className="dash-nav-lock" />
@@ -111,25 +135,21 @@ export function DashboardLayout({
             ))}
         </nav>
         <div className="dash-sidebar-bottom" onClick={() => setMenuOpen(false)}>
-          <span className="dash-tiny-label">YOUR WORKSPACE</span>
+          <span className="dash-tiny-label">Your workspace</span>
           {organizer && (
             <NavLink to="/app/settings" className="dash-nav-link">
               <Icon name="settings" />
-              <span>Wedding Settings</span>
+              <span>{t("Wedding Settings")}</span>
             </NavLink>
           )}
           <NavLink to="/app/members" className="dash-nav-link">
             <Icon name="people" />
-            <span>People & Access</span>
+            <span>{t("People & Access")}</span>
           </NavLink>
-          <div className="dash-family-note">
-            <Icon name="spark" />
-            <p>
-              Two families.
-              <br />
-              <strong>One beautiful beginning.</strong>
-            </p>
-          </div>
+          <NavLink to="/app/provider" className="dash-nav-link">
+            <Icon name="store" />
+            <span>{t("Your service profile")}</span>
+          </NavLink>
         </div>
       </aside>
 
@@ -150,13 +170,14 @@ export function DashboardLayout({
                 {wedding.brideName} & {wedding.groomName}
               </strong>
               <span>
-                {wedding.city} · {weddingDate(wedding.date)}
+                {wedding.city}, {weddingDate(wedding.date)}
               </span>
             </div>
           </div>
           <div className="dash-account-actions">
+            <LanguageToggle />
             <Link className="dash-guest-link" to={"/w/" + wedding.publicId}>
-              View guest website <Icon name="arrow" />
+              {t("View guest website")} <Icon name="arrow" />
             </Link>
             <div className="dash-account">
               <span className="dash-avatar">
@@ -188,7 +209,6 @@ export function DashboardLayout({
         </main>
         <footer className="dash-footer">
           <span>Make My Marriage</span>
-          <span>A little less follow-up. A little more together.</span>
         </footer>
       </div>
     </div>

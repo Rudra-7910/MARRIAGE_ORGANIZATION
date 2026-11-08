@@ -1,0 +1,32 @@
+name: Verify V1 release
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run check
+      - run: npm run test:production
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
+      - run: npm audit --omit=dev --audit-level=high
+      - run: docker build --tag make-my-marriage:ci .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: make-my-marriage-build
+          path: |
+            web/dist
+            server/dist
+          retention-days: 7

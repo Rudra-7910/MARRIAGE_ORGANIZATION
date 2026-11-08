@@ -1,6 +1,19 @@
 import axios from "axios";
+import { z } from "zod";
 
 export type AuthUser = { id: string; name: string; email: string };
+
+// Only return to a private page inside this app, never a supplied external URL.
+export function accountPathFromState(state: unknown) {
+  const result = z
+    .object({ returnTo: z.string().startsWith("/app/").max(2000) })
+    .safeParse(state);
+  if (!result.success) return "/app/overview";
+  const url = new URL(result.data.returnTo, "https://app.invalid");
+  if (url.origin !== "https://app.invalid" || !url.pathname.startsWith("/app/"))
+    return "/app/overview";
+  return url.pathname + url.search + url.hash;
+}
 
 // Vite forwards /api to Express. Cookies stay on the browser's current hostname.
 export const api = axios.create({

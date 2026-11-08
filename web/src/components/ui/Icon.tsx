@@ -13,7 +13,7 @@ export type IconName =
   | "wallet"
   | "mail"
   | "camera"
-  | "spark"
+  | "music"
   | "food"
   | "tent"
   | "clock"
@@ -83,9 +83,11 @@ const paths: Record<IconName, ReactNode> = {
       <circle cx="12" cy="13" r="3" />
     </>
   ),
-  spark: (
+  music: (
     <>
-      <path d="m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5Z" />
+      <path d="M9 18V5l12-2v13M9 9l12-2" />
+      <ellipse cx="6" cy="18" rx="3" ry="3" />
+      <ellipse cx="18" cy="16" rx="3" ry="3" />
     </>
   ),
   food: (

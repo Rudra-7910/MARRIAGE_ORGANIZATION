@@ -1,3 +1,5 @@
+import { LanguageToggle } from "../../features/integrations/LanguageToggle";
+import { useTranslation } from "react-i18next";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Brand } from "../ui/Brand";
@@ -14,6 +16,7 @@ const links = [
 ];
 
 export function SiteHeader({ onStart }: SiteHeaderProps) {
+  const { t } = useTranslation();
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
@@ -24,21 +27,22 @@ export function SiteHeader({ onStart }: SiteHeaderProps) {
         <nav className="desktop-nav" aria-label="Main navigation">
           {links.map((link) => (
             <a key={link.href} href={link.href}>
-              {link.label}
+              {t(link.label)}
             </a>
           ))}
         </nav>
 
         <div className="header-actions">
+          <LanguageToggle />
           <Link className="login-button" to="/login">
-            Log in
+            {t("Log in")}
           </Link>
 
           <button
             className="button button-primary header-cta"
             onClick={onStart}
           >
-            Plan your wedding
+            {t("Plan your wedding")}
             <Icon name="arrow" />
           </button>
 
@@ -66,7 +70,7 @@ export function SiteHeader({ onStart }: SiteHeaderProps) {
               href={link.href}
               onClick={() => setMenuOpen(false)}
             >
-              {link.label}
+              {t(link.label)}
               <Icon name="arrow" />
             </a>
           ))}
@@ -77,7 +81,7 @@ export function SiteHeader({ onStart }: SiteHeaderProps) {
               onStart();
             }}
           >
-            Plan your wedding
+            {t("Plan your wedding")}
             <Icon name="arrow" />
           </button>
         </nav>

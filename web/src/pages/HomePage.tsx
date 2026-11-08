@@ -40,24 +40,21 @@ export function HomePage() {
       <main id="main-content">
         <section className="celebration-home-hero celebration-container">
           <div className="celebration-hero-copy">
-            <span className="celebration-kicker">
-              <Icon name="spark" /> FOR YOUR PEOPLE. FOR YOUR BIG DAY.
-            </span>
             <h1>
-              Shaadi ke pal,
+              Your wedding,
               <br />
-              <em>saath sambhaalein.</em>
+              <span>one shared plan.</span>
             </h1>
             <p>
-              One shared wedding workspace for both families. Your plans,
-              invitations and celebration, beautifully together.
+              Keep track of ceremonies, vendors and expenses. Give both
+              families the same updates, and guests the details they need.
             </p>
             <div className="celebration-actions">
               <Link to="/signup" className="button button-primary">
                 Create wedding workspace <Icon name="arrow" />
               </Link>
               <a href="#features" className="button button-secondary">
-                Explore the experience <Icon name="chevron" />
+                See how it works <Icon name="chevron" />
               </a>
             </div>
             <div className="celebration-reassurance">
@@ -90,40 +87,40 @@ export function HomePage() {
           className="celebration-section celebration-container"
         >
           <div className="celebration-section-heading">
-            <span className="celebration-kicker">THOUGHTFUL SIMPLICITY</span>
-            <h2>
-              A little setup.
-              <br />
-              <em>A beautiful beginning.</em>
-            </h2>
-            <p>Start with your people. Make the rest feel a little easier.</p>
+            <h2>Start with your family and wedding details.</h2>
+            <p>
+              Set up once, then invite the family members and helpers who will
+              be planning with you.
+            </p>
           </div>
-          <div className="celebration-steps">
+          <ol className="celebration-steps">
             {[
               {
                 title: "Create your account",
-                body: "A private place to bring your wedding plans together.",
+                body: "Sign up as a couple, family member or planner.",
                 icon: "lock" as const,
               },
               {
                 title: "Add your family",
-                body: "Give your family a shared starting point, whichever side you’re from.",
+                body: "Enter your family name and choose the bride’s side, groom’s side or both.",
                 icon: "people" as const,
               },
               {
                 title: "Set up your wedding",
-                body: "Save the names, shubh muhurat, venue and a warm welcome for your guests.",
+                body: "Add the couple’s names, date, shubh muhurat, venue and family contact.",
                 icon: "calendar" as const,
               },
             ].map((step, index) => (
-              <article key={step.title}>
-                <span className="celebration-step-number">0{index + 1}</span>
+              <li key={step.title}>
+                <span className="celebration-step-number" aria-hidden="true">
+                  {index + 1}
+                </span>
                 <Icon name={step.icon} />
                 <h3>{step.title}</h3>
                 <p>{step.body}</p>
-              </article>
+              </li>
             ))}
-          </div>
+          </ol>
         </section>
 
         <section
@@ -131,22 +128,18 @@ export function HomePage() {
           className="celebration-story celebration-container"
         >
           <div className="celebration-story-copy">
-            <span className="celebration-kicker">
-              <Icon name="mail" /> A LITTLE LOVE, IN THEIR INBOX
-            </span>
             <h2>
               A personal invitation
               <br />
-              <em>for every family.</em>
+              <span>for every family.</span>
             </h2>
             <p>
-              Some invitations deserve more than a forwarded message. Add your
-              own words, preview the details, and invite one guest or family at
-              a time.
+              Save a family’s email address, add a note and preview the
+              invitation before sending it.
             </p>
             <div className="celebration-note-editor">
               <span className="celebration-sample">
-                TRY AN ILLUSTRATIVE PREVIEW · NOTHING IS SENT
+                Sample invitation. This preview does not send email.
               </span>
               <label>
                 Guest / family name
@@ -167,7 +160,7 @@ export function HomePage() {
                 />
               </label>
               <Link to="/signup" className="ws-text-link">
-                Make it your own <Icon name="arrow" />
+                Create an invitation <Icon name="arrow" />
               </Link>
             </div>
           </div>
@@ -176,7 +169,7 @@ export function HomePage() {
               src="/images/celebration/invitation-details.webp"
               srcSet="/images/celebration/invitation-details-small.webp 720w, /images/celebration/invitation-details.webp 1400w"
               sizes="(max-width: 850px) 90vw, 45vw"
-              alt="Marigolds, a brass diya and a thoughtfully prepared wedding invitation"
+              alt="Marigolds and a brass diya beside a wedding invitation"
               width={1400}
               height={1044}
               loading="lazy"
@@ -190,12 +183,8 @@ export function HomePage() {
               <p className="celebration-invocation" lang="hi">
                 ॥ श्री गणेशाय नमः ॥
               </p>
-              <span className="celebration-kicker">A SNEH-BHARA NIMANTRAN</span>
-              <h3>{family.trim() || "Your loved ones"}</h3>
+              <h3>{family.trim() || "Guest / family name"}</h3>
               <p lang="hi">{note || "Your personal note will appear here."}</p>
-              <span className="celebration-paper-footer">
-                Your names. Your wedding. Their blessings.
-              </span>
             </div>
           </div>
         </section>
@@ -215,55 +204,46 @@ export function HomePage() {
               loading="lazy"
               decoding="async"
             />
-            <span>For the people near. And the people far.</span>
           </div>
           <div className="celebration-story-copy">
-            <span className="celebration-kicker">
-              ONE LINK. A WARM WELCOME.
-            </span>
             <h2>
-              Easy to find.
+              The date. The venue.
               <br />
-              <em>Lovely to be part of.</em>
+              <span>One link for guests.</span>
             </h2>
             <p>
-              A wedding website that feels like your celebration. Guests find
-              the date, venue and family contact without another app or account.
+              Your date, directions and family contact. No guest registration
+              needed.
             </p>
             <div className="celebration-benefit">
               <Icon name="pin" />
               <div>
-                <h3>“Kahan pahunchna hai?” Sorted.</h3>
+                <h3>Directions to the venue</h3>
                 <p>Google Maps directions from your saved wedding location.</p>
               </div>
             </div>
             <div className="celebration-benefit">
               <Icon name="globe" />
               <div>
-                <h3>Celebrate from wherever you are.</h3>
+                <h3>Watch on YouTube</h3>
                 <p>
-                  Add your YouTube ceremony link for loved ones who can’t make
-                  it.
+                  Add a ceremony livestream link for guests joining from home.
                 </p>
               </div>
             </div>
             <Link to="/signup" className="ws-text-link">
-              Create your wedding’s home <Icon name="arrow" />
+              Set up your guest website <Icon name="arrow" />
             </Link>
           </div>
         </section>
 
         <section className="celebration-privacy celebration-container">
           <Icon name="lock" />
-          <h2>
-            Your planning stays private.
-            <br />
-            <em>Your celebration is easy to share.</em>
-          </h2>
+          <h2>Give each person the access they need.</h2>
           <p>
-            Your organizer workspace and guest website have separate access.
-            Your public page shares only the wedding details meant for your
-            guests.
+            Organizers manage expenses and invitations. Helpers see their work
+            and department progress. Guests see ceremony details and approved
+            photos, without an account.
           </p>
         </section>
         <section
@@ -271,12 +251,7 @@ export function HomePage() {
           className="celebration-section celebration-container"
         >
           <div className="celebration-section-heading">
-            <span className="celebration-kicker">A FEW GOOD QUESTIONS</span>
-            <h2>
-              Simple answers.
-              <br />
-              <em>More peace of mind.</em>
-            </h2>
+            <h2>Before you start</h2>
           </div>
           <div className="celebration-faq">
             {questions.map((item) => (
@@ -291,16 +266,9 @@ export function HomePage() {
           </div>
         </section>
         <section className="celebration-closing celebration-container">
-          <span className="celebration-kicker">A LITTLE MORE TOGETHER</span>
-          <h2>
-            Make room for the moments
-            <br />
-            <em>that matter.</em>
-          </h2>
+          <h2>Start planning your wedding.</h2>
           <p>
-            The happy tears. The family jokes. The people you love.
-            <br />
-            Let the planning bring you closer.
+            Add your family, set the date and invite your planning team.
           </p>
           <Link to="/signup" className="button">
             Create your wedding workspace <Icon name="arrow" />
@@ -314,18 +282,15 @@ export function HomePage() {
 }
 
 function ProductPreview() {
-  const tabs = ["Organize", "Invite", "Celebrate"];
+  const tabs = ["Planning", "Invitations", "Guest website"];
   const [tab, setTab] = useState(0);
   return (
     <div className="celebration-product-preview">
       <div className="celebration-preview-title">
-        <strong>
-          <Icon name="spark" />
-          Your celebration, together
-        </strong>
-        <span>Illustrative preview</span>
+        <strong>The wedding workspace</strong>
+        <span>Feature preview</span>
       </div>
-      <div role="tablist" aria-label="Explore the wedding experience">
+      <div role="tablist" aria-label="Preview wedding features">
         {tabs.map((name, index) => (
           <button
             key={name}
@@ -362,9 +327,8 @@ function ProductPreview() {
           <>
             <Icon name="calendar" />
             <div>
-              <span>YOUR WEDDING, AT A GLANCE</span>
-              <strong>Your date. Your venue. Your people.</strong>
-              <p>Saved details, one shared starting point.</p>
+              <strong>See which departments need attention.</strong>
+              <p>Track tasks, progress updates and pending expenses.</p>
             </div>
           </>
         )}
@@ -372,9 +336,8 @@ function ProductPreview() {
           <>
             <Icon name="mail" />
             <div>
-              <span>A PERSONAL FAMILY INVITATION</span>
               <strong lang="hi">आपकी उपस्थिति सादर प्रार्थनीय है।</strong>
-              <p>Preview your note, then send one family at a time.</p>
+              <p>Review the email, then send one family at a time.</p>
             </div>
           </>
         )}
@@ -382,9 +345,8 @@ function ProductPreview() {
           <>
             <Icon name="pin" />
             <div>
-              <span>A WARM WELCOME FOR YOUR GUESTS</span>
-              <strong>Directions. A little help. All the love.</strong>
-              <p>One wedding link, no guest sign-up.</p>
+              <strong>Date, directions and a number to call.</strong>
+              <p>Guests open your wedding link without signing up.</p>
             </div>
           </>
         )}

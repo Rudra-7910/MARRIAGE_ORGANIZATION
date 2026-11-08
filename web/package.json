@@ -14,9 +14,12 @@
     "@hookform/resolvers": "^5.9.2",
     "@tanstack/react-query": "^5.104.4",
     "axios": "^1.20.0",
+    "i18next": "^26.7.2",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
+    "react-error-boundary": "^6.1.6",
     "react-hook-form": "^7.90.0",
+    "react-i18next": "^17.1.13",
     "react-router-dom": "^7.18.4",
     "socket.io-client": "^4.8.4",
     "zod": "^4.6.7"

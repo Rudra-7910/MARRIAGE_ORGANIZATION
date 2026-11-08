@@ -1,5 +1,6 @@
 import type { Request, Response, NextFunction } from "express";
 import { ZodError } from "zod";
+import { logger } from "../config/logger.js";
 
 export function httpError(status: number, code: string, message: string) {
   return Object.assign(new Error(message), { status, code, expose: true });
@@ -56,9 +57,12 @@ export function errorHandler(
   }
 
   if (status === 500) {
-    console.error(
-      "[request] Unexpected failure. Request ID:",
-      res.locals.requestId,
+    logger.error(
+      {
+        requestId: res.locals.requestId,
+        errorType: error instanceof Error ? error.name : "UnknownError",
+      },
+      "Unexpected request failure.",
     );
   }
 
