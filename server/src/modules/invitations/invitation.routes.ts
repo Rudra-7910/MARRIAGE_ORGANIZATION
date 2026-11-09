@@ -1,3 +1,5 @@
+import type { GuestDocument } from "./invitation.model.js";
+import type { WeddingDocument } from "../weddings/wedding.models.js";
 import {
   lockOrganizerAccess,
   requireUser,
@@ -50,7 +52,7 @@ const leaseMs = 60000;
 // Resend keeps idempotency keys for 24h. Stop earlier to allow for clock/network drift.
 const retryWindowMs = 23 * 60 * 60 * 1000;
 
-function guestDetails(guest: InstanceType<typeof Guest>) {
+function guestDetails(guest: GuestDocument) {
   const invitation = guest.invitation;
   let status = invitation?.status || "not_sent";
   // A crashed send can outlive its lease without a confirmed provider result.
@@ -152,7 +154,7 @@ export function createInvitationRouter(
   });
 
   router.get("/", async (req, res) => {
-    const wedding = res.locals.wedding as InstanceType<typeof Wedding>;
+    const wedding = res.locals.wedding as WeddingDocument;
     const query = z
       .object({
         page: z.coerce.number().int().min(1).max(10000).default(1),
@@ -162,18 +164,14 @@ export function createInvitationRouter(
       .strict()
       .parse(req.query);
     const escapedSearch = escapeStringRegexp(query.search);
-    const filter = {
+    const filter: mongoose.QueryFilter<GuestDocument> = {
       wedding: wedding._id,
-      ...(query.side === "All" ? {} : { side: query.side }),
-      ...(escapedSearch
-        ? {
-            $or: [
-              { name: { $regex: escapedSearch, $options: "i" } },
-              { email: { $regex: escapedSearch, $options: "i" } },
-            ],
-          }
-        : {}),
     };
+    if (query.side !== "All") filter.side = query.side;
+    if (escapedSearch) {
+      const search = { $regex: escapedSearch, $options: "i" };
+      filter.$or = [{ name: search }, { email: search }];
+    }
     const [guests, total, counts] = await Promise.all([
       Guest.find(filter)
         .select(
@@ -224,7 +222,7 @@ export function createInvitationRouter(
     });
   });
   router.post("/", checkCsrf, async (req, res) => {
-    const wedding = res.locals.wedding as InstanceType<typeof Wedding>;
+    const wedding = res.locals.wedding as WeddingDocument;
     const values = guestInput.parse(req.body);
     const guest = await mongoose.connection.transaction(async (session) => {
       await lockOrganizerAccess(wedding, req.session.userId!, session);
@@ -237,7 +235,7 @@ export function createInvitationRouter(
     res.status(201).json({ data: guestDetails(guest) });
   });
   router.patch("/:id", checkCsrf, async (req, res) => {
-    const wedding = res.locals.wedding as InstanceType<typeof Wedding>;
+    const wedding = res.locals.wedding as WeddingDocument;
     const values = guestInput
       .extend({ version: z.number().int().min(0) })
       .strict()
@@ -286,7 +284,7 @@ export function createInvitationRouter(
     res.json({ data: guestDetails(updated) });
   });
   router.get("/:id/invitation", async (req, res) => {
-    const wedding = res.locals.wedding as InstanceType<typeof Wedding>;
+    const wedding = res.locals.wedding as WeddingDocument;
     const guest = await Guest.findOne({
       _id: req.params.id,
       wedding: wedding._id,
@@ -321,7 +319,7 @@ export function createInvitationRouter(
     });
   });
   router.post("/:id/preview", checkCsrf, async (req, res) => {
-    const wedding = res.locals.wedding as InstanceType<typeof Wedding>;
+    const wedding = res.locals.wedding as WeddingDocument;
     const values = emailInput.parse(req.body);
     const guest = await Guest.findOne({
       _id: req.params.id,
@@ -375,7 +373,7 @@ export function createInvitationRouter(
           "EMAIL_UNAVAILABLE",
           "Email sending is not configured. Add RESEND_API_KEY and RESEND_FROM to server/.env and restart the server.",
         );
-      const wedding = res.locals.wedding as InstanceType<typeof Wedding>;
+      const wedding = res.locals.wedding as WeddingDocument;
       const retry = req.path.endsWith("/retry") || req.path.endsWith("/retry/");
       const draft = retry ? null : emailInput.parse(req.body);
       const version = draft

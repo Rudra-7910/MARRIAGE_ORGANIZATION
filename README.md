@@ -70,7 +70,9 @@ Open **Guests & Invites → Add guest / family → Prepare invitation**. Preview
 
 `Submitted` means the email provider accepted the request; inbox delivery is not tracked. A timeout can leave an `Unconfirmed` result. Check the provider before retrying: retries reuse the saved content and idempotency key, even after wedding edits. The guest website continues to show current details.
 
-For private S3 credentials, bucket permissions, CORS and photo cleanup, follow [AWS S3 setup](docs/AWS-S3-Setup.md). Integration settings, role rules, limits and API-key placeholders are in [V1 flows and configuration](docs/V1-Completion.md). Keep keys server-side and out of source control.
+For photos, set `AWS_REGION` and `S3_BUCKET` in the backend environment. Locally, select a restricted AWS CLI profile with `AWS_PROFILE`. On Vercel, configure OIDC access through `AWS_ROLE_ARN`; on AWS hosting, attach a restricted workload role. Keep credentials server-side and out of source control.
+
+Keep the S3 bucket private with Block Public Access enabled and ACLs disabled. Grant the backend only `s3:GetObject`, `s3:PutObject` and `s3:DeleteObject` on its `staging/*` and `review/*` objects. Configure bucket CORS for the frontend origin with `PUT`, `GET` and `HEAD`, allowing `Content-Type` and `x-amz-*` headers. The explicit maintenance command `npm run media:cleanup --workspace server` retries tracked cleanup; it is not scheduled automatically. Optional integration placeholders are listed in `server/.env.example`.
 
 ## Code structure
 
@@ -99,25 +101,24 @@ server/src/
 
 To follow a request, start with a page’s TanStack Query query/mutation, then its Axios call in `web/src/lib`, then the matching Express route. Small handlers use Mongoose directly. Shared forms, permission rules, serialization and send/concurrency safeguards stay shared where consistency matters.
 
+Keep new code in the same style: ordinary `async/await`, explicit conditions and direct Mongoose calls in routes. Use Zod, React Hook Form and the existing SDKs for standard work. Extract a helper when it contains a shared rule or a substantial operation; avoid wrappers that only rename a single library call. Keep validation, guest-safe response fields, authorization, transactions and version checks in place when simplifying.
+
 ## Check and build
 
 ```sh
 npm run check
-npm run test:production
-npx playwright install chromium
-npm run test:e2e
 ```
 
-`check` runs both TypeScript checks, backend/frontend tests and production builds. API and browser tests use disposable MongoDB instances and stub email providers, not Atlas or real mail. The MongoDB binary downloads on the first test run. If using an installed Chrome browser, run `PLAYWRIGHT_CHROME_CHANNEL=chrome npm run test:e2e`.
+`check` runs both TypeScript checks, backend/frontend tests and production builds. Tests use disposable MongoDB instances and stub email providers, not Atlas or real mail. The MongoDB binary downloads on the first test run. GitHub CI also audits production dependencies and builds the Docker image.
 
-After building, `npm start` serves the app through Express. Read [Production release](docs/Production-Release.md) for AWS deployment, HTTPS/proxy configuration, health checks, support/policy settings and rollback. Deployment still requires infrastructure configuration. Current rate limits are per process; use a shared limiter before running multiple instances.
+After building, `npm start` serves the app through Express. Deployment requires infrastructure configuration, including the exact HTTPS origin, trusted proxy settings and storage access. Current rate limits are per process; use a shared limiter before running multiple instances.
 
-## Further documentation
+The application is also deployed on [Vercel](https://make-my-marriage-mocha.vercel.app). `vercel.json` builds both workspaces and routes API requests through `api/server.mjs`. Configure production variables from `server/.env.production.example`; adjust the CSP origin and S3 endpoint for your own deployment.
 
-- [Product requirements](docs/Make-My-Marriage-PRD.md)
-- [System design](docs/Make-My-Marriage-System-Design2.md)
-- [API design](docs/Make-My-Marriage-API-Design.md)
-- [Wedding setup flow](docs/Wedding-Setup-Flow.md)
-- [Design rules](design.md) and [UI reference](docs/designs/hallmark-redesign.md)
+The repository includes sanitized environment examples. Real environment files, credentials, generated files, `docs/`, `e2e/` and `playwright.config.ts` stay on the developer's machine and are ignored by Git. Do not add real secrets to the example files. Ignoring a file does not remove earlier commits containing it.
 
-The V1 configuration and production guides describe the implemented behavior where an earlier design proposal differs.
+## Local-only material
+
+Additional design notes, deployment guides and end-to-end tests are maintained locally. The `test:e2e`, `test:production` and `test:vercel` scripts remain available for that local tooling and require the excluded files. They are not run by GitHub CI.
+
+Public design rules are in [design.md](design.md).

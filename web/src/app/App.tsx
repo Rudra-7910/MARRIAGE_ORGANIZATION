@@ -76,11 +76,9 @@ export function App() {
       "photo-upload": "Share wedding photos",
       announcements: "Guest updates",
     };
-    const section = location.pathname.startsWith("/services/")
-      ? "service-profile"
-      : location.pathname.startsWith("/upload/")
-        ? "photo-upload"
-        : location.pathname.split("/").filter(Boolean).pop() || "";
+    let section = location.pathname.split("/").filter(Boolean).pop() || "";
+    if (location.pathname.startsWith("/services/")) section = "service-profile";
+    else if (location.pathname.startsWith("/upload/")) section = "photo-upload";
     document.title = sectionTitles[section]
       ? sectionTitles[section] + " — Make My Marriage"
       : "Make My Marriage — Wedding planning for both families";

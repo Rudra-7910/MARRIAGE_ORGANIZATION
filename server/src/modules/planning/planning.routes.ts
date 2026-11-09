@@ -1,14 +1,15 @@
+import type { WeddingDocument } from "../weddings/wedding.models.js";
 import { Router } from "express";
 import mongoose from "mongoose";
 import { z } from "zod";
 import { isPossiblePhoneNumber } from "libphonenumber-js";
 import { checkCsrf, createSessionMiddleware } from "../auth/auth.session.js";
-import { User } from "../auth/user.model.js";
+import type { UserDocument } from "../auth/user.model.js";
+import { requireUser } from "../../middleware/wedding-access.js";
 import { Wedding, canOrganize, roleFor } from "../weddings/wedding.models.js";
 import { httpError } from "../../middleware/error-handler.js";
 import { hasScheduleConflict, workStatuses } from "./planning.schema.js";
 
-type WeddingDocument = InstanceType<typeof Wedding>;
 const id = z
   .string()
   .refine(mongoose.isObjectIdOrHexString, "Invalid record ID.");
@@ -151,7 +152,7 @@ function planningData(wedding: WeddingDocument, userId: string) {
             "No progress update for " + planning.staleAfterDays + " days",
           );
       }
-      return {
+      const progress = {
         id: item._id.toString(),
         name: item.name,
         kind: item.kind,
@@ -167,26 +168,26 @@ function planningData(wedding: WeddingDocument, userId: string) {
         hasManualFlag: Boolean(item.flag?.reason && !item.flag.resolvedAt),
         canEdit,
         canManage: organizer,
-        ...(canEdit
-          ? {
-              notes: item.notes,
-              memberIds: item.memberIds.map((member) => member.toString()),
-              checklist: item.checklist.map((task) => ({
-                id: task._id.toString(),
-                title: task.title,
-                status: task.status,
-              })),
-              updates: item.updates
-                .map((update) => ({
-                  id: update._id.toString(),
-                  message: update.message,
-                  actor: update.actor,
-                  at: update.at.toISOString(),
-                  onBehalf: update.onBehalf,
-                }))
-                .reverse(),
-            }
-          : {}),
+      };
+      if (!canEdit) return progress;
+      return {
+        ...progress,
+        notes: item.notes,
+        memberIds: item.memberIds.map((member) => member.toString()),
+        checklist: item.checklist.map((task) => ({
+          id: task._id.toString(),
+          title: task.title,
+          status: task.status,
+        })),
+        updates: item.updates
+          .map((update) => ({
+            id: update._id.toString(),
+            message: update.message,
+            actor: update.actor,
+            at: update.at.toISOString(),
+            onBehalf: update.onBehalf,
+          }))
+          .reverse(),
       };
     }),
   };
@@ -194,13 +195,9 @@ function planningData(wedding: WeddingDocument, userId: string) {
 
 export function createPlanningRouter() {
   const router = Router();
-  router.use(createSessionMiddleware());
-  router.use(async (req, res, next) => {
-    const user = req.session.userId
-      ? await User.findById(req.session.userId).select("name")
-      : null;
-    if (!user)
-      throw httpError(401, "UNAUTHENTICATED", "Please log in to continue.");
+  router.use(createSessionMiddleware(), requireUser);
+  router.use(async (_req, res, next) => {
+    const user = res.locals.user as UserDocument;
     const wedding = await Wedding.findOne({ "members.userId": user.id });
     if (!wedding)
       throw httpError(

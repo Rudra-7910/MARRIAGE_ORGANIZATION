@@ -64,3 +64,5 @@ guestSchema.index({ accessHash: 1 }, { sparse: true, unique: true });
 guestSchema.index({ wedding: 1, createdAt: -1, _id: -1 });
 
 export const Guest = mongoose.model("Guest", guestSchema);
+
+export type GuestDocument = InstanceType<typeof Guest>;

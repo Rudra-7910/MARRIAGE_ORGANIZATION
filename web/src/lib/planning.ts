@@ -12,16 +12,27 @@ export type FunctionInput = {
   guestVisible: boolean;
 };
 export type WeddingFunction = FunctionInput & { id: string };
-export type DepartmentInput = {
+export type PublicWeddingFunction = {
+  id: string;
+  name: string;
+  startsAt: string;
+  endsAt: string;
+  venue: string;
+  address: string;
+  city: string;
+};
+type DepartmentDetails = {
   name: string;
   kind: "Family team" | "Outside vendor";
   contactRole: string;
   phone: string;
-  notes: string;
   deadline: string;
+};
+export type DepartmentInput = DepartmentDetails & {
+  notes: string;
   memberIds: string[];
 };
-export type Department = Omit<DepartmentInput, "notes" | "memberIds"> & {
+export type Department = DepartmentDetails & {
   id: string;
   status: WorkStatus;
   lastProgressAt: string;
@@ -96,7 +107,7 @@ export async function getPublicFunctions(
   signal?: AbortSignal,
 ) {
   const response = await api.get<{
-    data: Omit<WeddingFunction, "guestVisible">[];
+    data: PublicWeddingFunction[];
   }>("/public/weddings/" + encodeURIComponent(publicId) + "/functions", {
     signal,
   });

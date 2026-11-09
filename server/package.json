@@ -17,6 +17,7 @@
     "@google-cloud/translate": "^10.3.0",
     "@googlemaps/places": "^3.1.0",
     "@react-email/render": "^2.2.0",
+    "@vercel/oidc-aws-credentials-provider": "^3.3.19",
     "bcryptjs": "^3.0.3",
     "connect-mongo": "^6.0.0",
     "dotenv": "^17.4.2",

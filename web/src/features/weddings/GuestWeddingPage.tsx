@@ -13,7 +13,7 @@ import {
 } from "../../lib/weddings";
 import { WeddingCountdown } from "./WeddingCountdown";
 import { getPublicFunctions, planningTime } from "../../lib/planning";
-import type { WeddingFunction } from "../../lib/planning";
+import type { PublicWeddingFunction } from "../../lib/planning";
 import { getPublicAnnouncements } from "../../lib/site";
 import type { Announcement } from "../../lib/site";
 import { LanguageToggle } from "../integrations/LanguageToggle";
@@ -47,21 +47,21 @@ export function GuestWeddingPage() {
   });
   const personal = useQuery({
     queryKey: ["personal-invitation", publicId, invite],
-    queryFn: async ({ signal }) =>
-      (
-        await api.post<{
-          data: {
-            name: string;
-            side: string;
-            functions: WeddingFunction[];
-            announcements: Announcement[];
-          };
-        }>(
-          "/public/weddings/" + encodeURIComponent(publicId) + "/invitation",
-          { token: invite },
-          { signal },
-        )
-      ).data.data,
+    queryFn: async ({ signal }) => {
+      const response = await api.post<{
+        data: {
+          name: string;
+          side: string;
+          functions: PublicWeddingFunction[];
+          announcements: Announcement[];
+        };
+      }>(
+        "/public/weddings/" + encodeURIComponent(publicId) + "/invitation",
+        { token: invite },
+        { signal },
+      );
+      return response.data.data;
+    },
     enabled: Boolean(wedding) && invite !== null,
     staleTime: 30000,
     refetchInterval: 30000,
@@ -74,20 +74,15 @@ export function GuestWeddingPage() {
     staleTime: 30000,
     refetchInterval: 30000,
   });
-  const functions =
-    invite === null
-      ? publicFunctions
-      : {
-          data: personal.isError ? undefined : personal.data?.functions,
-          isError: personal.isError,
-          refetch: personal.refetch,
-        };
-  const updates =
-    invite === null
-      ? publicUpdates.data
-      : personal.isError
-        ? undefined
-        : personal.data?.announcements;
+  let functions = publicFunctions.data;
+  let functionsError = publicFunctions.isError;
+  let updates = publicUpdates.data;
+  if (invite !== null) {
+    // Never fall back to public or previously cached functions after a failed personal lookup.
+    functions = personal.isError ? undefined : personal.data?.functions;
+    updates = personal.isError ? undefined : personal.data?.announcements;
+    functionsError = personal.isError;
+  }
   if (query.isPending)
     return (
       <main className="celebration-status" role="status">
@@ -154,7 +149,7 @@ export function GuestWeddingPage() {
         <nav aria-label="Wedding information">
           <a href="#ceremony">{t("Our wedding")}</a>
           <a href="#venue">Venue</a>
-          {Boolean(functions.data?.length) && (
+          {Boolean(functions?.length) && (
             <a href="#guest-functions">Functions</a>
           )}
           {wedding.youtube && <a href="#ceremony-stream">Watch on YouTube</a>}
@@ -328,14 +323,14 @@ export function GuestWeddingPage() {
             </div>
           </div>
         </section>
-        {Boolean(functions.data?.length) && !functions.isError && (
+        {Boolean(functions?.length) && !functionsError && (
           <section
             className="plan-public-functions celebration-container"
             id="guest-functions"
           >
             <h2>Wedding functions</h2>
             <div className="guest-function-timeline">
-              {functions.data!.map((item) => (
+              {functions!.map((item) => (
                 <article key={item.id} className="guest-function-row">
                   <div className="guest-function-timing">
                     <time dateTime={item.startsAt + ":00+05:30"}>
@@ -369,10 +364,16 @@ export function GuestWeddingPage() {
             </div>
           </section>
         )}
-        {functions.isError && (
+        {functionsError && (
           <div className="celebration-sync-notice" role="status">
             We couldn’t load additional function timings.
-            <button type="button" onClick={() => functions.refetch()}>
+            <button
+              type="button"
+              onClick={() => {
+                if (invite === null) void publicFunctions.refetch();
+                else void personal.refetch();
+              }}
+            >
               Try again
             </button>
           </div>

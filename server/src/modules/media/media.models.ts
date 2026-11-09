@@ -58,3 +58,7 @@ const photoSchema = new mongoose.Schema(
 photoSchema.index({ wedding: 1, state: 1, createdAt: -1, _id: -1 });
 photoSchema.index({ grant: 1 });
 export const Photo = mongoose.model("Photo", photoSchema);
+
+export type PhotoDocument = InstanceType<typeof Photo>;
+
+export type UploadGrantDocument = InstanceType<typeof UploadGrant>;

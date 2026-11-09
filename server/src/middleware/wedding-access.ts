@@ -1,6 +1,6 @@
+import type { WeddingDocument } from "../modules/weddings/wedding.models.js";
 import type { ClientSession } from "mongoose";
 import type { RequestHandler } from "express";
-import { User } from "../modules/auth/user.model.js";
 import {
   Wedding,
   canOrganize,
@@ -9,10 +9,8 @@ import {
 import { httpError } from "./error-handler.js";
 
 export const requireUser: RequestHandler = (_req, res, next) => {
-  const user = res.locals.user as InstanceType<typeof User> | undefined;
-  if (!user)
+  if (!res.locals.user)
     throw httpError(401, "UNAUTHENTICATED", "Please log in to continue.");
-  res.locals.user = user;
   next();
 };
 
@@ -41,7 +39,7 @@ export const requireOrganizer: RequestHandler = (_req, res, next) => {
 // Cross-collection writes must conflict with membership removal in the same transaction.
 // This counter serializes access without changing the public wedding-detail version.
 export async function lockOrganizerAccess(
-  wedding: InstanceType<typeof Wedding>,
+  wedding: WeddingDocument,
   userId: string,
   session: ClientSession,
 ) {

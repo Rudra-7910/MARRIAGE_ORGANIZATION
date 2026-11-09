@@ -1,3 +1,4 @@
+import type { WeddingDocument, FamilyDocument } from "./wedding.models.js";
 import { Router } from "express";
 import mongoose from "mongoose";
 import { z } from "zod";
@@ -15,6 +16,7 @@ const familyInput = z
   })
   .strict();
 
+  
 const weddingInput = z
   .object({
     brideName: z.string().trim().min(1).max(80),
@@ -32,21 +34,12 @@ const weddingInput = z
     latitude: z.number().min(-90).max(90).nullable(),
     longitude: z.number().min(-180).max(180).nullable(),
     contactRole: z.string().trim().min(2).max(100),
-    phone: z
-      .string()
-      .trim()
-      .max(20)
-      .refine(
+    phone: z.string().trim().max(20).refine(
         (value) => isPossiblePhoneNumber(value, "IN"),
         "Enter a valid contact phone number.",
       ),
     welcome: z.string().trim().max(1000),
-    youtube: z
-      .string()
-      .trim()
-      .max(300)
-      .pipe(
-        z.union([
+    youtube: z.string().trim().max(300).pipe(z.union([
           z.literal(""),
           z.url({
             protocol: /^https$/,
@@ -64,7 +57,7 @@ const weddingInput = z
   });
 // This is the deliberate guest-safe projection, also used by the organizer UI.
 // No membership IDs, account email, family ownership or financial data is public.
-function details(wedding: InstanceType<typeof Wedding>) {
+function details(wedding: WeddingDocument) {
   return {
     publicId: wedding.publicId,
     brideName: wedding.brideName,
@@ -86,8 +79,8 @@ function details(wedding: InstanceType<typeof Wedding>) {
 }
 // Format a consistent response without making hidden database calls.
 function workspaceData(
-  wedding: InstanceType<typeof Wedding> | null,
-  family: InstanceType<typeof Family> | null,
+  wedding: WeddingDocument | null,
+  family: FamilyDocument | null,
   userId: string,
 ) {
   return {
@@ -119,6 +112,7 @@ export function createWeddingRouter() {
       );
     res.json({ data: details(wedding) });
   });
+
 
   router.get("/public/weddings/:publicId/functions", async (req, res) => {
     const wedding = await Wedding.findOne({ publicId: req.params.publicId });

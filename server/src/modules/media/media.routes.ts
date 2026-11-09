@@ -1,3 +1,5 @@
+import type { PhotoDocument, UploadGrantDocument } from "./media.models.js";
+import type { WeddingDocument } from "../weddings/wedding.models.js";
 import { Router } from "express";
 import mongoose from "mongoose";
 import { randomBytes, randomUUID } from "node:crypto";
@@ -62,7 +64,7 @@ async function uploadGrant(values: z.infer<typeof uploadInput>) {
   return { grant, wedding };
 }
 async function grantData(
-  grant: InstanceType<typeof UploadGrant>,
+  grant: UploadGrantDocument,
   publicId: string,
   includeQr = false,
 ) {
@@ -72,6 +74,10 @@ async function grantData(
     publicId +
     "#" +
     accessToken("upload", grant.id, grant.nonce);
+  let qrDataUrl: string | undefined;
+  if (includeQr) {
+    qrDataUrl = await QRCode.toDataURL(url, { width: 280, margin: 2 });
+  }
   return {
     id: grant.id,
     url,
@@ -79,12 +85,23 @@ async function grantData(
     limit: grant.limit,
     used: grant.used,
     revoked: grant.revoked,
-    ...(includeQr
-      ? { qrDataUrl: await QRCode.toDataURL(url, { width: 280, margin: 2 }) }
-      : {}),
+    qrDataUrl,
   };
 }
-async function photoData(photo: InstanceType<typeof Photo>, preview: boolean) {
+async function photoData(photo: PhotoDocument, preview: boolean) {
+  let url: string | undefined;
+  if (
+    preview &&
+    storageConfigured &&
+    photo.bytes > 0 &&
+    ["pending", "approved"].includes(photo.state)
+  ) {
+    url = await getSignedUrl(
+      storage,
+      new GetObjectCommand({ Bucket: env.s3Bucket, Key: photo.reviewKey }),
+      { expiresIn: 60 },
+    );
+  }
   return {
     id: photo.id,
     name: photo.name,
@@ -94,21 +111,7 @@ async function photoData(photo: InstanceType<typeof Photo>, preview: boolean) {
     height: photo.height,
     createdAt: photo.createdAt.toISOString(),
     version: photo.__v,
-    ...(preview &&
-    storageConfigured &&
-    photo.bytes > 0 &&
-    ["pending", "approved"].includes(photo.state)
-      ? {
-          url: await getSignedUrl(
-            storage,
-            new GetObjectCommand({
-              Bucket: env.s3Bucket,
-              Key: photo.reviewKey,
-            }),
-            { expiresIn: 60 },
-          ),
-        }
-      : {}),
+    url,
   };
 }
 async function processPhoto(input: Buffer, contentType: string) {
@@ -119,10 +122,13 @@ async function processPhoto(input: Buffer, contentType: string) {
       failOn: "warning",
     });
     const metadata = await image.metadata();
-    const mime = { jpeg: "image/jpeg", png: "image/png", webp: "image/webp" };
+    let detectedType = "";
+    if (metadata.format === "jpeg") detectedType = "image/jpeg";
+    else if (metadata.format === "png") detectedType = "image/png";
+    else if (metadata.format === "webp") detectedType = "image/webp";
     if (
-      !(metadata.format! in mime) ||
-      mime[metadata.format as keyof typeof mime] !== contentType ||
+      !detectedType ||
+      detectedType !== contentType ||
       (metadata.pages || 1) > 1
     )
       throw httpError(
@@ -524,7 +530,7 @@ export function createMediaRouter() {
       })
       .strict()
       .parse(req.query);
-    const wedding = res.locals.wedding as InstanceType<typeof Wedding>;
+    const wedding = res.locals.wedding as WeddingDocument;
     const organizer = canOrganize(res.locals.role);
     if (!organizer && state !== "approved")
       throw httpError(
@@ -567,7 +573,7 @@ export function createMediaRouter() {
     "/weddings/current/upload-links/:id",
     requireOrganizer,
     async (req, res) => {
-      const wedding = res.locals.wedding as InstanceType<typeof Wedding>;
+      const wedding = res.locals.wedding as WeddingDocument;
       const grant = await UploadGrant.findOne({
         _id: id.parse(req.params.id),
         wedding: wedding._id,
@@ -589,7 +595,7 @@ export function createMediaRouter() {
         })
         .strict()
         .parse(req.body);
-      const wedding = res.locals.wedding as InstanceType<typeof Wedding>;
+      const wedding = res.locals.wedding as WeddingDocument;
       const grantId = new mongoose.Types.ObjectId();
       const nonce = randomBytes(16).toString("hex");
       const grant = await mongoose.connection.transaction(async (session) => {
@@ -653,7 +659,7 @@ export function createMediaRouter() {
     requireOrganizer,
     checkCsrf,
     async (req, res) => {
-      const wedding = res.locals.wedding as InstanceType<typeof Wedding>;
+      const wedding = res.locals.wedding as WeddingDocument;
       await mongoose.connection.transaction(async (session) => {
         const authorized = await Wedding.updateOne(
           {
@@ -698,7 +704,7 @@ export function createMediaRouter() {
         })
         .strict()
         .parse(req.body);
-      const wedding = res.locals.wedding as InstanceType<typeof Wedding>;
+      const wedding = res.locals.wedding as WeddingDocument;
       const photo = await mongoose.connection.transaction(async (session) => {
         const authorized = await Wedding.updateOne(
           {

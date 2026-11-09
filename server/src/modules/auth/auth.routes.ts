@@ -1,3 +1,4 @@
+import type { UserDocument } from "./user.model.js";
 import { Router } from "express";
 import { createHash, randomBytes } from "node:crypto";
 import { rateLimit } from "express-rate-limit";
@@ -106,8 +107,9 @@ export function createAuthRouter(sendEmail: EmailSender = sendWithResend) {
   router.get("/me", tokenLimit, async (req, res) => {
     if (!req.session.userId)
       throw httpError(401, "UNAUTHENTICATED", "Please log in to continue.");
-    const user = res.locals.user as InstanceType<typeof User> | undefined;
-    if (!user)
+
+    const user = res.locals.user as UserDocument | undefined;
+    if (!user)https://make-my-marriage-mocha.vercel.app/
       throw httpError(401, "UNAUTHENTICATED", "Please log in to continue.");
     res.json({ data: publicUser(user) });
   });
@@ -162,11 +164,8 @@ export function createAuthRouter(sendEmail: EmailSender = sendWithResend) {
     res.json({ data: publicUser(user) });
   });
 
-  router.post(
-    "/forgot-password",
-    recoveryLimit,
-    checkCsrf,
-    async (req, res) => {
+  router.post("/forgot-password",recoveryLimit,checkCsrf,async (req, res) => {
+    
       const values = z.object({ email }).strict().parse(req.body);
       if (!env.resendApiKey || !env.resendFrom)
         throw httpError(
@@ -244,6 +243,7 @@ export function createAuthRouter(sendEmail: EmailSender = sendWithResend) {
       },
       { returnDocument: "after" },
     );
+    
     if (!user)
       throw httpError(
         400,

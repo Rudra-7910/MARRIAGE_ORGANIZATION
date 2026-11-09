@@ -22,6 +22,9 @@ export async function connectDatabase() {
       serverSelectionTimeoutMS: 5000,
       connectTimeoutMS: 5000,
       bufferCommands: false,
+      // A small pool per Vercel instance avoids exhausting Atlas connections.
+      maxPoolSize: process.env.VERCEL === "1" ? 10 : 100,
+      maxIdleTimeMS: 60000,
       // Build required indexes explicitly before enabling authentication.
       autoIndex: false,
     });

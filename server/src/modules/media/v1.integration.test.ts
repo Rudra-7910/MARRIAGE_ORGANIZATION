@@ -3,6 +3,8 @@ import { createServer } from "node:http";
 import { test } from "node:test";
 import { MongoMemoryReplSet } from "mongodb-memory-server";
 import sharp from "sharp";
+import type { ClientSession, QueryFilter, UpdateQuery } from "mongoose";
+import type { WeddingDocument } from "../weddings/wedding.models.js";
 import { io as connectSocket, type Socket } from "socket.io-client";
 
 test(
@@ -69,6 +71,7 @@ test(
     process.env.AWS_SECRET_ACCESS_KEY = "fake-test-secret";
     process.env.AWS_SESSION_TOKEN = "";
     process.env.AWS_PROFILE = "";
+    process.env.AWS_ROLE_ARN = "";
     process.env.S3_BUCKET = "photos";
     process.env.GOOGLE_PLACES_API_KEY = "";
     process.env.GOOGLE_TRANSLATION_API_KEY = "";
@@ -657,6 +660,53 @@ test(
           ).status,
           403,
         );
+        // A different organizer changes the plan after this request reads it.
+        const originalUpdate = Wedding.updateOne.bind(Wedding);
+        let planChanged = false;
+        const addRace = t.mock.method(
+          Wedding,
+          "updateOne",
+          async (
+            filter: QueryFilter<WeddingDocument>,
+            update: UpdateQuery<WeddingDocument>,
+            options?: { session?: ClientSession },
+          ) => {
+            if (!planChanged && update?.$set?.["planning.departments"]) {
+              planChanged = true;
+              await originalUpdate(
+                { _id: wedding._id },
+                {
+                  $push: { "planning.departments": { name: "Family seating" } },
+                  $inc: { "planning.version": 1 },
+                },
+              );
+            }
+            return originalUpdate(filter, update, options);
+          },
+        );
+        try {
+          const conflict = await request(
+            owner,
+            "/providers/" + providerId + "/add-to-wedding",
+            "POST",
+            {},
+          );
+          assert.equal(conflict.status, 409, JSON.stringify(conflict.body));
+          assert.equal(planChanged, true);
+          const current = await Wedding.findById(wedding._id);
+          assert.ok(
+            current!.planning!.departments.some(
+              (item) => item.name === "Family seating",
+            ),
+          );
+          assert.ok(
+            !current!.planning!.departments.some(
+              (item) => item.providerId?.toString() === providerId,
+            ),
+          );
+        } finally {
+          addRace.mock.restore();
+        }
         const added = await request(
           owner,
           "/providers/" + providerId + "/add-to-wedding",
@@ -706,6 +756,51 @@ test(
           {
             $set: { "planning.departments.$.status": "Done" },
             $inc: { __v: 1 },
+          },
+        );
+        // Review eligibility must not survive a concurrent change away from Done.
+        const originalUpdate = Wedding.updateOne.bind(Wedding);
+        let statusChanged = false;
+        const reviewRace = t.mock.method(
+          Wedding,
+          "updateOne",
+          async (
+            filter: QueryFilter<WeddingDocument>,
+            update: UpdateQuery<WeddingDocument>,
+            options?: { session?: ClientSession },
+          ) => {
+            if (!statusChanged && options?.session && update?.$inc?.__v) {
+              statusChanged = true;
+              await originalUpdate(
+                { _id: wedding._id, "planning.departments._id": departmentId },
+                {
+                  $set: { "planning.departments.$.status": "In progress" },
+                  $inc: { "planning.version": 1 },
+                },
+              );
+            }
+            return originalUpdate(filter, update, options);
+          },
+        );
+        try {
+          const conflict = await request(
+            owner,
+            "/providers/" + providerId + "/reviews",
+            "POST",
+            payload,
+          );
+          assert.equal(conflict.status, 409, JSON.stringify(conflict.body));
+          assert.equal(statusChanged, true);
+          const detail = await request(anonymous, "/providers/" + providerId);
+          assert.equal(detail.body.data.reviews.length, 0);
+        } finally {
+          reviewRace.mock.restore();
+        }
+        await Wedding.updateOne(
+          { _id: wedding._id, "planning.departments._id": departmentId },
+          {
+            $set: { "planning.departments.$.status": "Done" },
+            $inc: { "planning.version": 1 },
           },
         );
         assert.equal(

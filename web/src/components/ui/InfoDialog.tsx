@@ -31,25 +31,22 @@ export function InfoDialog({ topic, onClose }: InfoDialogProps) {
   const navigate = useNavigate();
   const info = useQuery({
     queryKey: ["site-info"],
-    queryFn: async () =>
-      (
-        await api.get<{
-          data: {
-            supportEmail: string;
-            privacyPolicyUrl: string;
-            termsUrl: string;
-          };
-        }>("/site-info")
-      ).data.data,
+    queryFn: async () => {
+      const response = await api.get<{
+        data: {
+          supportEmail: string;
+          privacyPolicyUrl: string;
+          termsUrl: string;
+        };
+      }>("/site-info");
+      return response.data.data;
+    },
     enabled: Boolean(topic),
     staleTime: 5 * 60000,
   });
-  const policyUrl =
-    topic === "privacy"
-      ? info.data?.privacyPolicyUrl
-      : topic === "terms"
-        ? info.data?.termsUrl
-        : null;
+  let policyUrl;
+  if (topic === "privacy") policyUrl = info.data?.privacyPolicyUrl;
+  else if (topic === "terms") policyUrl = info.data?.termsUrl;
 
   useEffect(() => {
     const dialog = dialogRef.current;

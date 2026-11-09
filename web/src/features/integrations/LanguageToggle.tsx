@@ -14,12 +14,12 @@ export function LanguageToggle() {
         const labels = await cache.fetchQuery({
           queryKey: ["interface-labels", "hi"],
           staleTime: 86400000,
-          queryFn: async () =>
-            (
-              await api.get<{ data: Record<string, string> }>(
-                "/interface-labels/hi",
-              )
-            ).data.data,
+          queryFn: async () => {
+            const response = await api.get<{ data: Record<string, string> }>(
+              "/interface-labels/hi",
+            );
+            return response.data.data;
+          },
         });
         i18n.addResourceBundle("hi", "translation", labels, true, true);
       }

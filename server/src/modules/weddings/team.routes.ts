@@ -1,3 +1,4 @@
+import type { WeddingDocument } from "./wedding.models.js";
 import { createHash, randomBytes } from "node:crypto";
 import { Router } from "express";
 import mongoose from "mongoose";
@@ -15,7 +16,6 @@ import {
   weddingRoles,
 } from "./wedding.models.js";
 
-type WeddingDocument = InstanceType<typeof Wedding>;
 const tokenInput = z.object({ token: z.hex().length(64).lowercase() }).strict();
 const objectId = z
   .string()
@@ -143,7 +143,7 @@ export function createTeamRouter() {
             id,
             name: person?.name || "Wedding member",
             role: roleFor(wedding, id),
-            ...(privileged || id === userId ? { email: person?.email } : {}),
+            email: privileged || id === userId ? person?.email : undefined,
             isCreator: id === wedding.createdBy.toString(),
             isYou: id === userId,
             canRemove: canRemove(wedding, userId, id),
@@ -155,25 +155,26 @@ export function createTeamRouter() {
               !invite.acceptedBy &&
               (privileged || invite.invitedBy.toString() === userId),
           )
-          .map((invite) => ({
-            id: invite._id.toString(),
-            role: invite.role,
-            expiresAt: invite.expiresAt,
-            status: invite.revokedAt
-              ? "revoked"
-              : invite.expiresAt <= new Date()
-                ? "expired"
-                : "pending",
-            canRevoke:
-              !invite.revokedAt &&
-              invite.expiresAt > new Date() &&
-              canRevoke(
-                wedding,
-                userId,
-                invite.role,
-                invite.invitedBy.toString(),
-              ),
-          })),
+          .map((invite) => {
+            let status = "pending";
+            if (invite.revokedAt) status = "revoked";
+            else if (invite.expiresAt <= new Date()) status = "expired";
+            return {
+              id: invite._id.toString(),
+              role: invite.role,
+              expiresAt: invite.expiresAt,
+              status,
+              canRevoke:
+                !invite.revokedAt &&
+                invite.expiresAt > new Date() &&
+                canRevoke(
+                  wedding,
+                  userId,
+                  invite.role,
+                  invite.invitedBy.toString(),
+                ),
+            };
+          }),
       },
     });
   });
@@ -230,10 +231,11 @@ export function createTeamRouter() {
           "TEAM_CONFLICT",
           "Team access changed. Refresh and try again.",
         );
+      const invitation = updated.teamInvites[updated.teamInvites.length - 1]!;
       // Only returned at creation. The database keeps the hash, not a reusable link.
       res.status(201).json({
         data: {
-          id: updated.teamInvites.at(-1)!._id.toString(),
+          id: invitation._id.toString(),
           role,
           expiresAt,
           url: env.appOrigin + "/team-invites#" + token,

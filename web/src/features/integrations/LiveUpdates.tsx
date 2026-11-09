@@ -5,7 +5,9 @@ import { io } from "socket.io-client";
 export function LiveUpdates({ userId }: { userId: string }) {
   const cache = useQueryClient();
   useEffect(() => {
-    const socket = io({ withCredentials: true });
+    // Vercel requires direct WebSockets rather than Socket.IO's HTTP polling.
+    // Saved data still refreshes through the existing authorized polling queries.
+    const socket = io({ withCredentials: true, transports: ["websocket"] });
     const privateKeys = [
       "wedding-dashboard",
       "wedding-setup",
@@ -28,12 +30,9 @@ export function LiveUpdates({ userId }: { userId: string }) {
       });
     });
     socket.on("workspace:changed", (event: { resource: string }) => {
-      const keys =
-        event.resource === "finance"
-          ? ["finance", "finance-summary"]
-          : event.resource === "guests"
-            ? ["guests"]
-            : privateKeys.filter((key) => key !== "invitation");
+      let keys = privateKeys.filter((key) => key !== "invitation");
+      if (event.resource === "finance") keys = ["finance", "finance-summary"];
+      else if (event.resource === "guests") keys = ["guests"];
       void cache.invalidateQueries({
         predicate: (query) =>
           keys.includes(String(query.queryKey[0])) &&

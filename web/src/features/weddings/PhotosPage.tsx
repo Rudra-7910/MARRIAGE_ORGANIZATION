@@ -24,6 +24,9 @@ export function PhotosPage({
   data: Workspace;
 }) {
   const organizer = canOrganize(data.role);
+  const photoStates: PhotoState[] = organizer
+    ? ["pending", "approved", "rejected"]
+    : ["approved"];
   const [state, setState] = useState<PhotoState>(
     organizer ? "pending" : "approved",
   );
@@ -137,10 +140,7 @@ export function PhotosPage({
       )}
       <div className="media-toolbar">
         <div className="dash-tabs" aria-label="Photo moderation views">
-          {(organizer
-            ? (["pending", "approved", "rejected"] as const)
-            : (["approved"] as const)
-          ).map((value) => (
+          {photoStates.map((value) => (
             <button
               type="button"
               key={value}

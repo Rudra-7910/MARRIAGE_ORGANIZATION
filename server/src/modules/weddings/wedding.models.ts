@@ -116,7 +116,10 @@ weddingSchema.index({ "teamInvites.tokenHash": 1 });
 export const Family = mongoose.model("Family", familySchema);
 export const Wedding = mongoose.model("Wedding", weddingSchema);
 
-export function roleFor(wedding: InstanceType<typeof Wedding>, userId: string) {
+export type WeddingDocument = InstanceType<typeof Wedding>;
+export type FamilyDocument = InstanceType<typeof Family>;
+
+export function roleFor(wedding: WeddingDocument, userId: string) {
   const member = wedding.members.find(
     (item) => item.userId.toString() === userId,
   );

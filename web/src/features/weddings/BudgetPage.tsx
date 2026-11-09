@@ -561,18 +561,13 @@ function FinanceEditor({
       reason: "",
     },
   });
-  const title =
-    editor.kind === "budget"
-      ? "Wedding budget"
-      : editor.kind === "expense"
-        ? expense
-          ? "Edit expense"
-          : "Add expense"
-        : editor.kind === "payment"
-          ? "Record a payment already made"
-          : editor.kind === "voidPayment"
-            ? "Void an incorrect payment record"
-            : "Void expense";
+  let title = "Void expense";
+  if (editor.kind === "budget") title = "Wedding budget";
+  else if (editor.kind === "expense")
+    title = expense ? "Edit expense" : "Add expense";
+  else if (editor.kind === "payment") title = "Record a payment already made";
+  else if (editor.kind === "voidPayment")
+    title = "Void an incorrect payment record";
   const frozenPayment = canCorrect ? null : submittedPayment;
   return (
     <PlanningDialog title={title} onClose={onClose}>

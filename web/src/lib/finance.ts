@@ -33,8 +33,14 @@ export type Expense = ExpenseInput & {
   voidReason: string;
   payments: ExpensePayment[];
 };
-type FinanceSnapshot = Partial<ExpenseInput & { budgetPaise: number | null }>;
-export type Finance = {
+type FinanceSnapshot = {
+  title?: string;
+  departmentId?: string | null;
+  agreedPaise?: number;
+  notes?: string;
+  budgetPaise?: number | null;
+};
+export type FinanceSummary = {
   version: number;
   currency: "INR";
   budgetPaise: number | null;
@@ -45,6 +51,8 @@ export type Finance = {
     creditPaise: number;
     budgetRemainingPaise: number | null;
   };
+};
+export type Finance = FinanceSummary & {
   departments: { id: string; name: string }[];
   expenses: Expense[];
   audit: {
@@ -91,7 +99,7 @@ export async function getFinance(signal?: AbortSignal) {
 }
 export async function getFinanceSummary(signal?: AbortSignal) {
   const response = await api.get<{
-    data: Pick<Finance, "version" | "currency" | "budgetPaise" | "totals">;
+    data: FinanceSummary;
   }>("/weddings/current/budget/summary", { signal });
   return response.data.data;
 }

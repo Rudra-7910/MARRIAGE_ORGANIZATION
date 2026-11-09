@@ -27,8 +27,7 @@ export const cookieOptions = {
 // Reuse Mongoose's connection. No extra DB connection and no in-memory session fallback.
 export function createSessionMiddleware(): RequestHandler {
   let middleware: RequestHandler | undefined;
-  let sessionClient:
-    ReturnType<typeof mongoose.connection.getClient> | undefined;
+  let sessionClient: mongoose.mongo.MongoClient | undefined;
   return (req, res, next) => {
     if (!isDatabaseReady()) {
       next(
@@ -81,11 +80,12 @@ export function createSessionMiddleware(): RequestHandler {
             !user ||
             (user.sessionVersion || 0) !== (req.session.sessionVersion || 0)
           ) {
-            await new Promise<void>((resolve, reject) =>
-              req.session.destroy((failure) =>
-                failure ? reject(failure) : resolve(),
-              ),
-            );
+            await new Promise<void>((resolve, reject) => {
+              req.session.destroy((failure) => {
+                if (failure) reject(failure);
+                else resolve();
+              });
+            });
             next(
               httpError(
                 401,
@@ -95,7 +95,7 @@ export function createSessionMiddleware(): RequestHandler {
             );
             return;
           }
-          res.locals ||= {};
+          if (!res.locals) res.locals = {};
           res.locals.user = user;
         }
         next();
@@ -151,14 +151,20 @@ export async function startUserSession(
   sessionVersion = 0,
 ) {
   const oldSessionId = req.sessionID;
-  await new Promise<void>((resolve, reject) =>
-    req.session.regenerate((error) => (error ? reject(error) : resolve())),
-  );
+  await new Promise<void>((resolve, reject) => {
+    req.session.regenerate((error) => {
+      if (error) reject(error);
+      else resolve();
+    });
+  });
   req.app.locals.realtime?.disconnectSession(oldSessionId);
   req.session.userId = userId;
   req.session.sessionVersion = sessionVersion;
   req.session.csrfToken = randomBytes(32).toString("hex");
-  await new Promise<void>((resolve, reject) =>
-    req.session.save((error) => (error ? reject(error) : resolve())),
-  );
+  await new Promise<void>((resolve, reject) => {
+    req.session.save((error) => {
+      if (error) reject(error);
+      else resolve();
+    });
+  });
 }

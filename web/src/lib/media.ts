@@ -195,10 +195,9 @@ export async function completeUpload(
 }
 
 export async function getUploadLink(id: string, signal?: AbortSignal) {
-  return (
-    await api.get<{ data: UploadGrant }>(
-      "/weddings/current/upload-links/" + encodeURIComponent(id),
-      { signal },
-    )
-  ).data.data;
+  const response = await api.get<{ data: UploadGrant }>(
+    "/weddings/current/upload-links/" + encodeURIComponent(id),
+    { signal },
+  );
+  return response.data.data;
 }

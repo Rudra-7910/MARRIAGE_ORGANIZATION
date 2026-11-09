@@ -113,18 +113,19 @@ export function createIntegrationRouter() {
         "Translation is loading. Please try again shortly.",
       );
     try {
-      translator ||= new v2.Translate({ key: env.googleTranslationApiKey });
+      if (!translator) {
+        translator = new v2.Translate({ key: env.googleTranslationApiKey });
+      }
       const [translations] = await translator.translate([...interfaceLabels], {
         from: "en",
         to: "hi",
         format: "text",
       });
-      const labels = Object.fromEntries(
-        interfaceLabels.map((label, index) => [
-          label,
-          translations[index] || label,
-        ]),
-      );
+      const labels: Record<string, string> = {};
+      for (let index = 0; index < interfaceLabels.length; index++) {
+        const label = interfaceLabels[index]!;
+        labels[label] = translations[index] || label;
+      }
       await TranslationCache.updateOne(
         { key: translationKey },
         {
@@ -165,7 +166,9 @@ export function createIntegrationRouter() {
           "Place search is not configured yet. You can enter the address and coordinates manually.",
         );
       try {
-        places ||= new PlacesClient({ apiKey: env.googlePlacesApiKey });
+        if (!places) {
+          places = new PlacesClient({ apiKey: env.googlePlacesApiKey });
+        }
         const [response] = await places.searchText(
           {
             textQuery: search,

@@ -1,16 +1,71 @@
+# Dependencies, builds, caches and generated reports.
 node_modules/
 **/dist/
+.vite/
+.cache/
+.eslintcache
+*.tsbuildinfo
+*.log
+coverage/
+playwright-report/
+test-results/
+/output/
+/outputs/
+
+# Real environment files stay local; sanitized setup examples remain public.
 .env
 .env.*
 !.env.example
 !.env.production.example
-*.log
-*.tsbuildinfo
-coverage/
-playwright-report/
-test-results/
+
+# Cloud credentials, private keys and local secret exports.
+.aws/
+.vercel/
+.npmrc
+credentials
+credentials.json
+*credentials*.csv
+*accessKeys*.csv
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+*service-account*.json
+*service_account*.json
+
+# Uploaded files, database backups and private exports.
+/uploads/
+/server/uploads/
+/private/
+/backups/
+/exports/
+/dump/
+*.bson
+*.bson.gz
+*.dump
+*.sqlite
+*.sqlite3
+*.db
+*.db-wal
+*.db-shm
+
+# Documentation and end-to-end tooling are maintained locally.
+/docs/
+/e2e/
+/playwright.config.ts
+
+# Personal editor settings, design cache and scratch files.
 .DS_Store
+Thumbs.db
+.idea/
+.vscode/
+.history/
+*.code-workspace
+*.swp
+*.swo
+*~
 .hallmark/
-# Local C++ practice executables and VS Code Code Runner scratch files.
 /oops
 /tempCodeRunnerFile*

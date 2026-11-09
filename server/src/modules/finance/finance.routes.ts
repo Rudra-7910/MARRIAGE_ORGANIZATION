@@ -1,3 +1,4 @@
+import type { WeddingDocument } from "../weddings/wedding.models.js";
 import { Router } from "express";
 import mongoose from "mongoose";
 import { createHash } from "node:crypto";
@@ -8,7 +9,6 @@ import { Wedding, canOrganize, roleFor } from "../weddings/wedding.models.js";
 import { httpError } from "../../middleware/error-handler.js";
 import { maxMoneyPaise } from "./finance.schema.js";
 
-type WeddingDocument = InstanceType<typeof Wedding>;
 type Finance = NonNullable<WeddingDocument["finance"]>;
 type Expense = Finance["expenses"][number];
 type Payment = Expense["payments"][number];
@@ -65,7 +65,6 @@ const commandInput = z.discriminatedUnion("action", [
     })
     .strict(),
 ]);
-type Command = z.infer<typeof commandInput>;
 
 function paymentReceipt(expenseId: string, payment: Payment) {
   // Immutable result of the original recording, even if that entry is later voided.
@@ -87,9 +86,10 @@ function financeData(wedding: WeddingDocument) {
     name: item.name,
   }));
   const expenses = finance.expenses.map((expense) => {
-    const paidPaise = expense.payments
-      .filter((payment) => !payment.voidedAt)
-      .reduce((sum, payment) => sum + payment.amountPaise, 0);
+    let paidPaise = 0;
+    for (const payment of expense.payments) {
+      if (!payment.voidedAt) paidPaise += payment.amountPaise;
+    }
     return {
       id: expense._id.toString(),
       title: expense.title,
@@ -137,14 +137,15 @@ function financeData(wedding: WeddingDocument) {
 // Both the overview and detailed ledger use these exact accounting rules.
 function financeSummary(wedding: WeddingDocument) {
   const finance = wedding.finance!;
-  let agreedPaise = 0,
-    paidPaise = 0,
-    pendingPaise = 0,
-    creditPaise = 0;
+  let agreedPaise = 0;
+  let paidPaise = 0;
+  let pendingPaise = 0;
+  let creditPaise = 0;
   for (const expense of finance.expenses) {
-    const paid = expense.payments
-      .filter((payment) => !payment.voidedAt)
-      .reduce((sum, payment) => sum + payment.amountPaise, 0);
+    let paid = 0;
+    for (const payment of expense.payments) {
+      if (!payment.voidedAt) paid += payment.amountPaise;
+    }
     paidPaise += paid;
     if (expense.voidedAt) continue;
     agreedPaise += expense.agreedPaise;
@@ -200,12 +201,12 @@ export function createFinanceRouter() {
     res.locals.wedding = wedding;
     next();
   });
-  router.get("/", (_req, res) =>
-    res.json({ data: financeData(res.locals.wedding) }),
-  );
-  router.get("/summary", (_req, res) =>
-    res.json({ data: financeSummary(res.locals.wedding) }),
-  );
+  router.get("/", (_req, res) => {
+    res.json({ data: financeData(res.locals.wedding) });
+  });
+  router.get("/summary", (_req, res) => {
+    res.json({ data: financeSummary(res.locals.wedding) });
+  });
   router.patch("/", checkCsrf, async (req, res) => {
     const command = commandInput.parse(req.body);
     const wedding = res.locals.wedding as WeddingDocument;
@@ -227,7 +228,11 @@ export function createFinanceRouter() {
           }),
         )
         .digest("hex");
-      const existing = findRecordedPayment(wedding, command, requestHash);
+      const existing = findRecordedPayment(
+        wedding,
+        command.idempotencyKey,
+        requestHash,
+      );
       if (existing) {
         res.json({
           data: financeData(wedding),
@@ -295,7 +300,7 @@ export function createFinanceRouter() {
           createdAt: now,
           updatedAt: now,
         });
-        const added = finance.expenses.at(-1)!;
+        const added = finance.expenses[finance.expenses.length - 1]!;
         finance.audit.push({
           action: "Expense added",
           expenseId: added._id,
@@ -438,7 +443,11 @@ export function createFinanceRouter() {
           "members.userId": userId,
         }).select("+finance");
         if (current && canOrganize(roleFor(current, userId))) {
-          const existing = findRecordedPayment(current, command, requestHash);
+          const existing = findRecordedPayment(
+            current,
+            command.idempotencyKey,
+            requestHash,
+          );
           if (existing) {
             res.json({
               data: financeData(current),
@@ -455,10 +464,14 @@ export function createFinanceRouter() {
         "Expenses or your access changed. Reload before saving.",
       );
     }
-    const receipt =
-      command.action === "recordPayment"
-        ? findRecordedPayment(updated, command, requestHash)
-        : undefined;
+    let receipt = null;
+    if (command.action === "recordPayment") {
+      receipt = findRecordedPayment(
+        updated,
+        command.idempotencyKey,
+        requestHash,
+      );
+    }
     res.json({
       data: financeData(updated),
       ...(receipt ? { receipt, replayed: false } : {}),
@@ -469,12 +482,12 @@ export function createFinanceRouter() {
 
 function findRecordedPayment(
   wedding: WeddingDocument,
-  command: Extract<Command, { action: "recordPayment" }>,
+  idempotencyKey: string,
   requestHash: string,
 ) {
   for (const expense of wedding.finance!.expenses) {
     const payment = expense.payments.find(
-      (entry) => entry.idempotencyKey === command.idempotencyKey,
+      (entry) => entry.idempotencyKey === idempotencyKey,
     );
     if (!payment) continue;
     if (payment.requestHash !== requestHash)

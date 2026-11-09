@@ -1,127 +1,109 @@
-import path from "node:path";
-import { isIP } from "node:net";
 import dotenv from "dotenv";
 import { z } from "zod";
 
-// Resolve server/.env from this file, so commands also work from the repo root.
-const envFile = path.resolve(import.meta.dirname, "../../.env");
-dotenv.config({ path: envFile, quiet: true });
-
-const nodeEnv = process.env.NODE_ENV || "development";
-if (!["development", "test", "production"].includes(nodeEnv)) {
-  throw new Error("NODE_ENV must be development, test, or production.");
+// Load server/.env locally; Vercel provides its own environment variables.
+if (process.env.VERCEL !== "1") {
+  dotenv.config({ path: new URL("../../.env", import.meta.url), quiet: true });
 }
 
-const port = Number(process.env.PORT || 3001);
-if (!Number.isInteger(port) || port < 1 || port > 65535) {
-  throw new Error("PORT must be a valid number between 1 and 65535.");
-}
+const optionalHttpsUrl = z.url({ protocol: /^https$/ }).or(z.literal(""));
+const settings = z
+  .object({
+    NODE_ENV: z.enum(["development", "test", "production"]),
+    PORT: z.coerce.number().int().min(1).max(65535),
+    MONGODB_URI: z
+      .string()
+      .trim()
+      .min(1)
+      .refine(
+        (value) =>
+          value.startsWith("mongodb://") || value.startsWith("mongodb+srv://"),
+        "MONGODB_URI must be a MongoDB connection string.",
+      ),
+    SESSION_SECRET: z.string().min(32),
+    LINK_SECRET: z.string().min(32).optional(),
+    APP_ORIGIN: z.url({ protocol: /^https?$/ }),
+    SUPPORT_EMAIL: z.email().or(z.literal("")),
+    PRIVACY_POLICY_URL: optionalHttpsUrl,
+    TERMS_URL: optionalHttpsUrl,
+  })
+  .parse({
+    ...process.env,
+    NODE_ENV: process.env.NODE_ENV || "development",
+    PORT: process.env.PORT || 3001,
+    LINK_SECRET: process.env.LINK_SECRET || undefined,
+    APP_ORIGIN: process.env.APP_ORIGIN || "http://127.0.0.1:3000",
+    SUPPORT_EMAIL: (process.env.SUPPORT_EMAIL || "").trim(),
+    PRIVACY_POLICY_URL: (process.env.PRIVACY_POLICY_URL || "").trim(),
+    TERMS_URL: (process.env.TERMS_URL || "").trim(),
+  });
 
-const mongoUri = (process.env.MONGODB_URI || "").trim();
-if (!mongoUri)
-  throw new Error(
-    "MONGODB_URI is required. Set it in server/.env before starting the server.",
-  );
-if (
-  !mongoUri.startsWith("mongodb://") &&
-  !mongoUri.startsWith("mongodb+srv://")
-) {
-  throw new Error("MONGODB_URI must be a MongoDB connection string.");
-}
-
-const sessionSecret = process.env.SESSION_SECRET || "";
-if (sessionSecret.length < 32)
-  throw new Error("SESSION_SECRET must have at least 32 characters.");
-if (process.env.LINK_SECRET && process.env.LINK_SECRET.length < 32) {
-  throw new Error("LINK_SECRET must have at least 32 characters when set.");
-}
-if (nodeEnv === "production" && !process.env.LINK_SECRET) {
-  throw new Error("Set a separate, stable LINK_SECRET before production.");
-}
-const appOrigin = process.env.APP_ORIGIN || "http://127.0.0.1:3000";
-const parsedOrigin = new URL(appOrigin);
-if (
-  parsedOrigin.origin !== appOrigin ||
-  !["http:", "https:"].includes(parsedOrigin.protocol)
-)
+const isProduction = settings.NODE_ENV === "production";
+const parsedOrigin = new URL(settings.APP_ORIGIN);
+if (parsedOrigin.origin !== settings.APP_ORIGIN) {
   throw new Error(
     "APP_ORIGIN must be an HTTP origin without a trailing slash.",
   );
-if (nodeEnv === "production" && parsedOrigin.protocol !== "https:")
-  throw new Error("Production APP_ORIGIN must use HTTPS.");
-for (const name of ["PRIVACY_POLICY_URL", "TERMS_URL"]) {
-  if (
-    process.env[name] &&
-    !z.url({ protocol: /^https$/ }).safeParse(process.env[name]).success
-  )
-    throw new Error(name + " must be an HTTPS URL.");
 }
-if (
-  process.env.SUPPORT_EMAIL &&
-  !z.email().safeParse(process.env.SUPPORT_EMAIL).success
-)
-  throw new Error("SUPPORT_EMAIL must be a valid email address.");
+if (isProduction && parsedOrigin.protocol !== "https:") {
+  throw new Error("Production APP_ORIGIN must use HTTPS.");
+}
+if (isProduction && !settings.LINK_SECRET) {
+  throw new Error("Set a separate, stable LINK_SECRET before production.");
+}
 
-// In local development these two names reach the same Vite server.
-// Production always accepts only the exact configured origin.
-const allowedOrigins = [appOrigin];
+// Allow the localhost alias in development, keeping production origins exact.
+const allowedOrigins = [settings.APP_ORIGIN];
 if (
-  nodeEnv !== "production" &&
+  !isProduction &&
   ["localhost", "127.0.0.1"].includes(parsedOrigin.hostname)
 ) {
-  const localAlias = new URL(appOrigin);
+  const localAlias = new URL(settings.APP_ORIGIN);
   localAlias.hostname =
     parsedOrigin.hostname === "localhost" ? "127.0.0.1" : "localhost";
   allowedOrigins.push(localAlias.origin);
 }
 
-// Trust only explicitly configured proxy IPs/subnets; never trust arbitrary headers.
 const trustedProxies = (process.env.TRUST_PROXY_CIDRS || "")
   .split(",")
   .map((value) => value.trim())
   .filter(Boolean);
-for (const proxy of trustedProxies) {
-  const [address, prefix, extra] = proxy.split("/");
-  const family = isIP(address || "");
-  const maxPrefix = family === 4 ? 32 : 128;
-  if (
-    !family ||
-    extra !== undefined ||
-    (prefix !== undefined &&
-      (!/^\d+$/.test(prefix) ||
-        Number(prefix) < 1 ||
-        Number(prefix) > maxPrefix))
-  ) {
-    throw new Error(
-      "TRUST_PROXY_CIDRS must contain explicit IPs or CIDRs, not true, hop counts, or /0 networks.",
-    );
-  }
+const proxyAddress = z.union([z.ipv4(), z.ipv6(), z.cidrv4(), z.cidrv6()]);
+if (
+  trustedProxies.some(
+    (proxy) => proxy.endsWith("/0") || !proxyAddress.safeParse(proxy).success,
+  )
+) {
+  throw new Error(
+    "TRUST_PROXY_CIDRS must contain specific proxy IPs or CIDRs, never /0 networks.",
+  );
 }
 
 export const env = {
-  nodeEnv,
-  isProduction: nodeEnv === "production",
-  port,
+  nodeEnv: settings.NODE_ENV,
+  isProduction,
+  port: settings.PORT,
   host: process.env.HOST || "127.0.0.1",
-  mongoUri,
-  sessionSecret,
-  linkSecret: process.env.LINK_SECRET || sessionSecret,
+  mongoUri: settings.MONGODB_URI,
+  sessionSecret: settings.SESSION_SECRET,
+  linkSecret: settings.LINK_SECRET || settings.SESSION_SECRET,
   awsRegion: (
     process.env.AWS_REGION ||
     process.env.AWS_DEFAULT_REGION ||
     ""
   ).trim(),
   s3Bucket: (process.env.S3_BUCKET || "").trim(),
+  awsRoleArn: (process.env.AWS_ROLE_ARN || "").trim(),
   googlePlacesApiKey: process.env.GOOGLE_PLACES_API_KEY || "",
   googleTranslationApiKey: process.env.GOOGLE_TRANSLATION_API_KEY || "",
   moderatorIds: (process.env.PLATFORM_MODERATOR_USER_IDS || "")
     .split(",")
     .map((value) => value.trim())
     .filter(Boolean),
-  appOrigin,
-  supportEmail: (process.env.SUPPORT_EMAIL || "").trim(),
-  privacyPolicyUrl: (process.env.PRIVACY_POLICY_URL || "").trim(),
-  termsUrl: (process.env.TERMS_URL || "").trim(),
+  appOrigin: settings.APP_ORIGIN,
+  supportEmail: settings.SUPPORT_EMAIL,
+  privacyPolicyUrl: settings.PRIVACY_POLICY_URL,
+  termsUrl: settings.TERMS_URL,
   allowedOrigins,
   trustedProxies,
   // Optional until invitations are enabled. These values never go to the browser.

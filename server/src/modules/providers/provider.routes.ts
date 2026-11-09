@@ -1,3 +1,4 @@
+import type { WeddingDocument } from "../weddings/wedding.models.js";
 import { Router } from "express";
 import mongoose from "mongoose";
 import { z } from "zod";
@@ -77,9 +78,7 @@ function providerData(profile: Listing) {
     averageRating: profile.averageRating || 0,
     reviewCount: profile.reviewCount || 0,
     createdAt: profile.createdAt.toISOString(),
-    ...(profile.distanceKm === undefined
-      ? {}
-      : { distanceKm: profile.distanceKm }),
+    distanceKm: profile.distanceKm,
   };
 }
 const ratingStages: mongoose.PipelineStage[] = [
@@ -146,46 +145,36 @@ export function createProviderRouter() {
         "Provide both coordinates.",
       )
       .parse(req.query);
-    const filter = {
+    const filter: mongoose.QueryFilter<ProviderFields> = {
       published: true,
       hidden: false,
-      ...(query.category === "all" ? {} : { category: query.category }),
-      ...(query.search
-        ? {
-            $or: ["name", "city", "description"].map((field) => ({
-              [field]: {
-                $regex: escapeStringRegexp(query.search),
-                $options: "i",
-              },
-            })),
-          }
-        : {}),
     };
-    const stages: mongoose.PipelineStage[] =
-      query.latitude === undefined
-        ? [{ $match: filter }]
-        : [
-            {
-              $geoNear: {
-                near: {
-                  type: "Point",
-                  coordinates: [query.longitude!, query.latitude],
-                },
-                distanceField: "distanceMeters",
-                spherical: true,
-                maxDistance: 1000000,
-                query: filter,
-              },
+    if (query.category !== "all") filter.category = query.category;
+    if (query.search) {
+      const search = { $regex: escapeStringRegexp(query.search), $options: "i" };
+      filter.$or = [{ name: search }, { city: search }, { description: search }];
+    }
+    const stages: mongoose.PipelineStage[] = [];
+    if (query.latitude === undefined) {
+      stages.push({ $match: filter });
+    } else {
+      stages.push(
+        {
+          $geoNear: {
+            near: {
+              type: "Point",
+              coordinates: [query.longitude!, query.latitude],
             },
-            {
-              $addFields: {
-                distanceKm: { $divide: ["$distanceMeters", 1000] },
-              },
-            },
-            {
-              $match: { $expr: { $lte: ["$distanceKm", "$serviceRadiusKm"] } },
-            },
-          ];
+            distanceField: "distanceMeters",
+            spherical: true,
+            maxDistance: 1000000,
+            query: filter,
+          },
+        },
+        { $addFields: { distanceKm: { $divide: ["$distanceMeters", 1000] } } },
+        { $match: { $expr: { $lte: ["$distanceKm", "$serviceRadiusKm"] } } },
+      );
+    }
     const [result] = await Provider.aggregate<{
       items: Listing[];
       count: { total: number }[];
@@ -372,7 +361,7 @@ export function createProviderRouter() {
       });
       if (!profile)
         throw httpError(404, "NOT_FOUND", "This service is not available.");
-      const wedding = res.locals.wedding as InstanceType<typeof Wedding>;
+      const wedding = res.locals.wedding as WeddingDocument;
       const planning = wedding.planning!;
       const linked = planning.departments.find(
         (department) => department.providerId?.toString() === providerId,
@@ -398,10 +387,15 @@ export function createProviderRouter() {
         notes: "Service found in the directory. Confirm arrangements directly.",
         memberIds: [],
       });
+      // Department edits change planning.version independently of the wedding's __v.
       const updated = await Wedding.updateOne(
         {
           _id: wedding._id,
           __v: wedding.__v,
+          "planning.version":
+            wedding.planning?.version === 0
+              ? { $in: [0, null] }
+              : wedding.planning?.version,
           members: {
             $elemMatch: {
               userId: req.session.userId,
@@ -437,7 +431,7 @@ export function createProviderRouter() {
         .strict()
         .parse(req.body);
       const providerId = id.parse(req.params.id);
-      const wedding = res.locals.wedding as InstanceType<typeof Wedding>;
+      const wedding = res.locals.wedding as WeddingDocument;
       const department = wedding.planning?.departments.id(values.departmentId);
       const profile = await Provider.findOne({
         _id: providerId,
@@ -462,6 +456,10 @@ export function createProviderRouter() {
             {
               _id: wedding._id,
               __v: wedding.__v,
+              "planning.version":
+                wedding.planning?.version === 0
+                  ? { $in: [0, null] }
+                  : wedding.planning?.version,
               members: {
                 $elemMatch: {
                   userId: req.session.userId,
@@ -518,7 +516,7 @@ export function createProviderRouter() {
         .extend({ version: z.number().int().min(0) })
         .strict()
         .parse(req.body);
-      const wedding = res.locals.wedding as InstanceType<typeof Wedding>;
+      const wedding = res.locals.wedding as WeddingDocument;
       const review = await Review.findOne({
         _id: id.parse(req.params.reviewId),
         provider: id.parse(req.params.id),
@@ -543,6 +541,10 @@ export function createProviderRouter() {
           {
             _id: wedding._id,
             __v: wedding.__v,
+            "planning.version":
+              wedding.planning?.version === 0
+                ? { $in: [0, null] }
+                : wedding.planning?.version,
             members: {
               $elemMatch: {
                 userId: req.session.userId,

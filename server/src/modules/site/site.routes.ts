@@ -1,3 +1,4 @@
+import type { WeddingDocument } from "../weddings/wedding.models.js";
 import { Router } from "express";
 import mongoose from "mongoose";
 import { z } from "zod";
@@ -55,7 +56,8 @@ const commandInput = z.discriminatedUnion("action", [
     })
     .strict(),
 ]);
-type WeddingDocument = InstanceType<typeof Wedding>;
+
+
 function announcements(wedding: WeddingDocument, functionIds: string[] | null) {
   return (wedding.site?.announcements || [])
     .filter(

@@ -32,11 +32,9 @@ export function attachRealtime(server: HttpServer, app: Application) {
       );
     }
     const userId = req.session?.userId;
-    const user = userId
-      ? await User.findById(userId).select("+sessionVersion")
-      : null;
+    if (!userId) throw new Error("Sign in to receive wedding updates.");
+    const user = await User.findById(userId).select("+sessionVersion");
     if (
-      !userId ||
       !user ||
       (user.sessionVersion || 0) !== (req.session.sessionVersion || 0)
     )
@@ -49,13 +47,13 @@ export function attachRealtime(server: HttpServer, app: Application) {
     if (!role) throw new Error("Wedding access was removed.");
     return { userId, weddingId: wedding.id, role, sessionId: req.sessionID };
   }
-  io.use((socket, next) => {
-    void authorize(socket)
-      .then((access) => {
-        socket.data = access;
-        next();
-      })
-      .catch(() => next(new Error("Wedding access is required.")));
+  io.use(async (socket, next) => {
+    try {
+      socket.data = await authorize(socket);
+      next();
+    } catch {
+      next(new Error("Wedding access is required."));
+    }
   });
   io.on("connection", (socket) => {
     void socket.join("session:" + socket.data.sessionId);
@@ -100,28 +98,27 @@ export function attachRealtime(server: HttpServer, app: Application) {
       path: string,
       weddingId?: string,
     ) => {
-      const wedding = weddingId
-        ? { id: weddingId }
-        : userId
-          ? await Wedding.findOne({ "members.userId": userId }).select("_id")
-          : null;
-      if (!wedding) return;
+      let currentWeddingId = weddingId;
+      if (!currentWeddingId && userId) {
+        const wedding = await Wedding.findOne({
+          "members.userId": userId,
+        }).select("_id");
+        currentWeddingId = wedding?.id;
+      }
+      if (!currentWeddingId) return;
       if (path.includes("members") || path.includes("team-invites"))
-        await revalidate(wedding.id);
+        await revalidate(currentWeddingId);
       const privateChange =
         path.includes("/budget") ||
         path.includes("/guests") ||
         path.includes("/upload-links") ||
         path.includes("/uploads");
       const room =
-        "wedding:" + wedding.id + (privateChange ? ":organizers" : ":team");
-      io.to(room).emit("workspace:changed", {
-        resource: path.includes("/budget")
-          ? "finance"
-          : path.includes("/guests")
-            ? "guests"
-            : "workspace",
-      });
+        "wedding:" + currentWeddingId + (privateChange ? ":organizers" : ":team");
+      let resource = "workspace";
+      if (path.includes("/budget")) resource = "finance";
+      else if (path.includes("/guests")) resource = "guests";
+      io.to(room).emit("workspace:changed", { resource });
     },
   };
   return io;

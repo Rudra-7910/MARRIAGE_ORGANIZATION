@@ -4,7 +4,7 @@ import { Resend } from "resend";
 import { z } from "zod";
 import { accessToken } from "../site/access-token.js";
 import { env } from "../../config/env.js";
-import type { Wedding } from "../weddings/wedding.models.js";
+import type { WeddingDocument } from "../weddings/wedding.models.js";
 
 export type EmailPayload = {
   from: string;
@@ -21,7 +21,7 @@ export type EmailSender = (
   key: string,
 ) => Promise<SendResult>;
 
-export function invitationDefaults(wedding: InstanceType<typeof Wedding>) {
+export function invitationDefaults(wedding: WeddingDocument) {
   return {
     subject:
       `शुभ विवाह निमंत्रण: ${wedding.brideName} & ${wedding.groomName} · ${wedding.city}`.slice(
@@ -36,7 +36,7 @@ export function invitationDefaults(wedding: InstanceType<typeof Wedding>) {
 // React escapes text; React Email renders HTML and derives its plain-text version.
 // Keep the table layout and inline styles that email clients require.
 export async function renderInvitation(
-  wedding: InstanceType<typeof Wedding>,
+  wedding: WeddingDocument,
   guest: { name: string; id?: string; accessNonce?: string | null },
   subject: string,
   message: string,
