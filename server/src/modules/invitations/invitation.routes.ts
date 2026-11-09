@@ -11,7 +11,6 @@ import escapeStringRegexp from "escape-string-regexp";
 import { rateLimit } from "express-rate-limit";
 import { z } from "zod";
 import { accessToken, tokenHash } from "../site/access-token.js";
-import { env } from "../../config/env.js";
 import { httpError } from "../../middleware/error-handler.js";
 import { createSessionMiddleware, checkCsrf } from "../auth/auth.session.js";
 import { Wedding } from "../weddings/wedding.models.js";
@@ -217,7 +216,9 @@ export function createInvitationRouter(
         page: query.page,
         pageSize: 20,
         summary,
-        emailConfigured: Boolean(env.resendApiKey && env.resendFrom),
+        emailConfigured: Boolean(
+          process.env.RESEND_API_KEY && process.env.RESEND_FROM,
+        ),
       },
     });
   });
@@ -304,7 +305,7 @@ export function createInvitationRouter(
           revoked: guest.accessRevoked,
           url: guest.accessRevoked
             ? null
-            : env.appOrigin +
+            : process.env.APP_ORIGIN! +
               "/w/" +
               wedding.publicId +
               "#invite=" +
@@ -314,7 +315,9 @@ export function createInvitationRouter(
         message: draft.message,
         html: rendered.html,
         weddingVersion: wedding.__v,
-        emailConfigured: Boolean(env.resendApiKey && env.resendFrom),
+        emailConfigured: Boolean(
+          process.env.RESEND_API_KEY && process.env.RESEND_FROM,
+        ),
       },
     });
   });
@@ -367,7 +370,7 @@ export function createInvitationRouter(
     checkCsrf,
     sendLimit,
     async (req, res) => {
-      if (!env.resendApiKey || !env.resendFrom)
+      if (!process.env.RESEND_API_KEY || !process.env.RESEND_FROM)
         throw httpError(
           503,
           "EMAIL_UNAVAILABLE",
@@ -446,7 +449,7 @@ export function createInvitationRouter(
         invitation = {
           key: "wedding-invite/" + randomUUID(),
           leaseId: randomUUID(),
-          from: env.resendFrom,
+          from: process.env.RESEND_FROM,
           to: guest.email,
           subject: draft.subject,
           message: draft.message,

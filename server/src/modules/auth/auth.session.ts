@@ -5,7 +5,6 @@ import MongoStore from "connect-mongo";
 import mongoose from "mongoose";
 import { z } from "zod";
 import { isDatabaseReady } from "../../config/database.js";
-import { env } from "../../config/env.js";
 import { httpError } from "../../middleware/error-handler.js";
 import { User } from "./user.model.js";
 
@@ -16,13 +15,26 @@ declare module "express-session" {
     sessionVersion?: number;
   }
 }
-export const cookieName = env.isProduction ? "__Host-mmm.sid" : "mmm.sid";
+export const cookieName =
+  process.env.NODE_ENV === "production" ? "__Host-mmm.sid" : "mmm.sid";
 export const cookieOptions = {
   httpOnly: true,
-  secure: env.isProduction,
+  secure: process.env.NODE_ENV === "production",
   sameSite: "lax" as const,
   path: "/",
 };
+
+// Localhost aliases are allowed only in development; production uses one exact origin.
+export const allowedOrigins = [process.env.APP_ORIGIN!];
+const localOrigin = new URL(process.env.APP_ORIGIN!);
+if (
+  process.env.NODE_ENV !== "production" &&
+  ["localhost", "127.0.0.1"].includes(localOrigin.hostname)
+) {
+  localOrigin.hostname =
+    localOrigin.hostname === "localhost" ? "127.0.0.1" : "localhost";
+  allowedOrigins.push(localOrigin.origin);
+}
 
 // Reuse Mongoose's connection. No extra DB connection and no in-memory session fallback.
 export function createSessionMiddleware(): RequestHandler {
@@ -53,7 +65,7 @@ export function createSessionMiddleware(): RequestHandler {
       );
       middleware = session({
         name: cookieName,
-        secret: env.sessionSecret,
+        secret: process.env.SESSION_SECRET!,
         store,
         resave: false,
         saveUninitialized: false,
@@ -115,7 +127,7 @@ const csrfTokenInput = z.hex().length(64).lowercase();
 
 export function checkCsrf(req: Request, _res: Response, next: NextFunction) {
   const origin = req.get("origin");
-  if (origin && !env.allowedOrigins.includes(origin)) {
+  if (origin && !allowedOrigins.includes(origin)) {
     next(
       httpError(
         403,

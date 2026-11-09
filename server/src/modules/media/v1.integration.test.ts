@@ -85,7 +85,6 @@ test(
     const { Guest } = await import("../invitations/invitation.model.js");
     const { Photo } = await import("./media.models.js");
     const { accessToken } = await import("../site/access-token.js");
-    const { env } = await import("../../config/env.js");
     await connectDatabase();
     const app = createApp({
       sendEmail: async () => {
@@ -130,7 +129,7 @@ test(
         method,
         headers: {
           Cookie: client.cookie,
-          Origin: env.appOrigin,
+          Origin: process.env.APP_ORIGIN!,
           "Content-Type": "application/json",
           ...(token ? { "X-CSRF-Token": token } : {}),
         },
@@ -873,7 +872,7 @@ test(
           409,
         );
         assert.equal((await request(owner, "/moderation")).status, 403);
-        env.moderatorIds.push(owner.id!);
+        process.env.PLATFORM_MODERATOR_USER_IDS = owner.id!;
         assert.equal(
           (
             await request(owner, "/moderation/reviews/" + review.id, "PATCH", {
@@ -1005,7 +1004,7 @@ test(
         const anonymousSocket = connectSocket(origin, {
           transports: ["websocket"],
           reconnection: false,
-          extraHeaders: { Origin: env.appOrigin },
+          extraHeaders: { Origin: process.env.APP_ORIGIN! },
         });
         sockets.push(anonymousSocket);
         await new Promise<void>((resolve, reject) => {
@@ -1022,7 +1021,10 @@ test(
           const socket = connectSocket(origin, {
             transports: ["websocket"],
             reconnection: false,
-            extraHeaders: { Cookie: client.cookie, Origin: env.appOrigin },
+            extraHeaders: {
+              Cookie: client.cookie,
+              Origin: process.env.APP_ORIGIN!,
+            },
           });
           sockets.push(socket);
           await new Promise<void>((resolve, reject) => {

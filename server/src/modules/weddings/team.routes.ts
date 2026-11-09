@@ -4,7 +4,6 @@ import { Router } from "express";
 import mongoose from "mongoose";
 import { rateLimit } from "express-rate-limit";
 import { z } from "zod";
-import { env } from "../../config/env.js";
 import { httpError } from "../../middleware/error-handler.js";
 import { checkCsrf, createSessionMiddleware } from "../auth/auth.session.js";
 import { User } from "../auth/user.model.js";
@@ -238,7 +237,7 @@ export function createTeamRouter() {
           id: invitation._id.toString(),
           role,
           expiresAt,
-          url: env.appOrigin + "/team-invites#" + token,
+          url: process.env.APP_ORIGIN! + "/team-invites#" + token,
         },
       });
     },

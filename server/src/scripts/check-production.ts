@@ -1,17 +1,20 @@
+import "../config/env.js";
 import { existsSync } from "node:fs";
 import path from "node:path";
-import { env } from "../config/env.js";
 
 // Configuration/build checks only. No cloud changes, emails or database writes.
 const checks = [
-  { name: "Production environment", pass: env.isProduction },
+  {
+    name: "Production environment",
+    pass: process.env.NODE_ENV === "production",
+  },
   {
     name: "HTTPS application origin",
-    pass: env.appOrigin.startsWith("https://"),
+    pass: process.env.APP_ORIGIN!.startsWith("https://"),
   },
   {
     name: "Independent stable link secret",
-    pass: env.linkSecret !== env.sessionSecret,
+    pass: process.env.LINK_SECRET! !== process.env.SESSION_SECRET!,
   },
   {
     name: "React production build",
@@ -25,15 +28,21 @@ const checks = [
   },
   {
     name: "Resend key and verified sender address",
-    pass: Boolean(env.resendApiKey && env.resendFrom),
+    pass: Boolean(process.env.RESEND_API_KEY && process.env.RESEND_FROM),
   },
   {
     name: "S3 region and private bucket name",
-    pass: Boolean(env.awsRegion && env.s3Bucket),
+    pass: Boolean(process.env.AWS_REGION && process.env.S3_BUCKET),
   },
-  { name: "Public support email", pass: Boolean(env.supportEmail) },
-  { name: "Published privacy policy", pass: Boolean(env.privacyPolicyUrl) },
-  { name: "Published terms", pass: Boolean(env.termsUrl) },
+  {
+    name: "Public support email",
+    pass: Boolean(process.env.SUPPORT_EMAIL || ""),
+  },
+  {
+    name: "Published privacy policy",
+    pass: Boolean(process.env.PRIVACY_POLICY_URL || ""),
+  },
+  { name: "Published terms", pass: Boolean(process.env.TERMS_URL || "") },
 ];
 for (const check of checks)
   console.info(`${check.pass ? "PASS" : "FAIL"} ${check.name}`);

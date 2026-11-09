@@ -1,3 +1,4 @@
+import "./config/env.js";
 import express from "express";
 import helmet from "helmet";
 import { randomUUID } from "node:crypto";
@@ -5,7 +6,6 @@ import path from "node:path";
 import { rateLimit } from "express-rate-limit";
 import { pinoHttp } from "pino-http";
 import { logger } from "./config/logger.js";
-import { env } from "./config/env.js";
 import { errorHandler } from "./middleware/error-handler.js";
 import { createAuthRouter } from "./modules/auth/auth.routes.js";
 import { createWeddingRouter } from "./modules/weddings/wedding.routes.js";
@@ -27,20 +27,29 @@ export function createApp(
 ) {
   const app = express();
   app.disable("x-powered-by");
-  if (env.trustedProxies.length) app.set("trust proxy", env.trustedProxies);
+  const trustedProxies = (process.env.TRUST_PROXY_CIDRS || "")
+    .split(",")
+    .map((proxy) => proxy.trim())
+    .filter(Boolean);
+  if (trustedProxies.length) app.set("trust proxy", trustedProxies);
   const webRoot =
     options.webRoot ||
-    (env.isProduction
+    (process.env.NODE_ENV === "production"
       ? path.resolve(import.meta.dirname, "../../web/dist")
       : null);
   const storageOrigin =
-    env.s3Bucket && env.awsRegion
-      ? "https://" + env.s3Bucket + ".s3." + env.awsRegion + ".amazonaws.com"
+    process.env.S3_BUCKET && process.env.AWS_REGION
+      ? "https://" +
+        process.env.S3_BUCKET +
+        ".s3." +
+        process.env.AWS_REGION +
+        ".amazonaws.com"
       : null;
   const storageSources = storageOrigin ? [storageOrigin] : [];
   app.use(
     helmet({
-      strictTransportSecurity: env.isProduction ? undefined : false,
+      strictTransportSecurity:
+        process.env.NODE_ENV === "production" ? undefined : false,
       referrerPolicy: { policy: "no-referrer" },
       contentSecurityPolicy: {
         directives: {
@@ -55,12 +64,13 @@ export function createApp(
           imgSrc: ["'self'", "data:", "blob:", ...storageSources],
           connectSrc: [
             "'self'",
-            env.appOrigin.replace(/^http/, "ws"),
+            process.env.APP_ORIGIN!.replace(/^http/, "ws"),
             ...storageSources,
           ],
           frameSrc: ["'self'", "https://www.youtube-nocookie.com"],
           frameAncestors: ["'none'"],
-          upgradeInsecureRequests: env.isProduction ? [] : null,
+          upgradeInsecureRequests:
+            process.env.NODE_ENV === "production" ? [] : null,
         },
       },
     }),
@@ -125,9 +135,9 @@ export function createApp(
   app.get("/api/v1/site-info", (_req, res) => {
     res.json({
       data: {
-        supportEmail: env.supportEmail,
-        privacyPolicyUrl: env.privacyPolicyUrl,
-        termsUrl: env.termsUrl,
+        supportEmail: process.env.SUPPORT_EMAIL || "",
+        privacyPolicyUrl: process.env.PRIVACY_POLICY_URL || "",
+        termsUrl: process.env.TERMS_URL || "",
       },
     });
   });

@@ -1,10 +1,9 @@
 import pino from "pino";
-import { env } from "./env.js";
 
 // Logs contain operational metadata, never request bodies, cookies or email links.
 export const logger = pino({
-  enabled: env.nodeEnv !== "test",
-  level: env.isProduction ? "info" : "warn",
+  enabled: process.env.NODE_ENV !== "test",
+  level: process.env.NODE_ENV === "production" ? "info" : "warn",
   base: undefined,
   redact: {
     paths: ["req.headers", "req.body", "res.headers", "password", "token"],

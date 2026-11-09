@@ -1,3 +1,4 @@
+import "./env.js";
 import mongoose from "mongoose";
 import { Family, Wedding } from "../modules/weddings/wedding.models.js";
 import { User } from "../modules/auth/user.model.js";
@@ -5,7 +6,6 @@ import { Guest } from "../modules/invitations/invitation.model.js";
 import { TranslationCache } from "../modules/integrations/integration.routes.js";
 import { Provider, Review } from "../modules/providers/provider.models.js";
 import { Photo, UploadGrant } from "../modules/media/media.models.js";
-import { env } from "./env.js";
 
 let initialized = false;
 let initializationFailed = false;
@@ -18,7 +18,7 @@ export async function connectDatabase() {
   initialized = false;
   initializationFailed = false;
   try {
-    await mongoose.connect(env.mongoUri, {
+    await mongoose.connect(process.env.MONGODB_URI!, {
       serverSelectionTimeoutMS: 5000,
       connectTimeoutMS: 5000,
       bufferCommands: false,

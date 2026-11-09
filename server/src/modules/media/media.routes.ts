@@ -13,7 +13,6 @@ import {
   PutObjectCommand,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { env } from "../../config/env.js";
 import {
   storage,
   storageConfigured,
@@ -69,7 +68,7 @@ async function grantData(
   includeQr = false,
 ) {
   const url =
-    env.appOrigin +
+    process.env.APP_ORIGIN! +
     "/upload/" +
     publicId +
     "#" +
@@ -98,7 +97,7 @@ async function photoData(photo: PhotoDocument, preview: boolean) {
   ) {
     url = await getSignedUrl(
       storage,
-      new GetObjectCommand({ Bucket: env.s3Bucket, Key: photo.reviewKey }),
+      new GetObjectCommand({ Bucket: process.env.S3_BUCKET, Key: photo.reviewKey }),
       { expiresIn: 60 },
     );
   }
@@ -198,7 +197,7 @@ export function createMediaRouter() {
     const signed = await getSignedUrl(
       storage,
       new PutObjectCommand({
-        Bucket: env.s3Bucket,
+        Bucket: process.env.S3_BUCKET,
         Key: stagingKey,
         ContentType: values.type,
         ContentLength: values.size,
@@ -263,7 +262,7 @@ export function createMediaRouter() {
     const uploadUrl = await getSignedUrl(
       storage,
       new PutObjectCommand({
-        Bucket: env.s3Bucket,
+        Bucket: process.env.S3_BUCKET,
         Key: photo.stagingKey,
         ContentType: photo.type,
         ContentLength: photo.expectedBytes,
@@ -339,7 +338,7 @@ export function createMediaRouter() {
     activeVerifications++;
     try {
       const head = await storage.send(
-        new HeadObjectCommand({ Bucket: env.s3Bucket, Key: photo.stagingKey }),
+        new HeadObjectCommand({ Bucket: process.env.S3_BUCKET, Key: photo.stagingKey }),
       );
       if (
         !head.ContentLength ||
@@ -353,7 +352,7 @@ export function createMediaRouter() {
         );
       const object = await storage.send(
         new GetObjectCommand({
-          Bucket: env.s3Bucket,
+          Bucket: process.env.S3_BUCKET,
           Key: photo.stagingKey,
           Range: "bytes=0-" + maxPhotoBytes,
         }),
@@ -368,7 +367,7 @@ export function createMediaRouter() {
       const output = await processPhoto(input, photo.type);
       await storage.send(
         new PutObjectCommand({
-          Bucket: env.s3Bucket,
+          Bucket: process.env.S3_BUCKET,
           Key: photo.reviewKey,
           Body: output.data,
           ContentType: "image/webp",
@@ -497,7 +496,7 @@ export function createMediaRouter() {
       const url = await getSignedUrl(
         storage,
         new GetObjectCommand({
-          Bucket: env.s3Bucket,
+          Bucket: process.env.S3_BUCKET,
           Key: photo.reviewKey,
           ResponseContentDisposition:
             (download ? "attachment" : "inline") +

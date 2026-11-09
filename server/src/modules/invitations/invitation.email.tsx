@@ -3,7 +3,6 @@ import { parsePhoneNumberFromString } from "libphonenumber-js";
 import { Resend } from "resend";
 import { z } from "zod";
 import { accessToken } from "../site/access-token.js";
-import { env } from "../../config/env.js";
 import type { WeddingDocument } from "../weddings/wedding.models.js";
 
 export type EmailPayload = {
@@ -63,7 +62,7 @@ export async function renderInvitation(
       ? "&destination_place_id=" + encodeURIComponent(wedding.googlePlaceId)
       : "");
   const website =
-    env.appOrigin +
+    process.env.APP_ORIGIN! +
     "/w/" +
     encodeURIComponent(wedding.publicId) +
     (guest.id && guest.accessNonce
@@ -295,9 +294,9 @@ export async function renderInvitation(
 
 // The SDK handles HTTP and response types. Our application still owns send safety.
 export const sendWithResend: EmailSender = async (email, key) => {
-  if (!env.resendApiKey)
+  if (!process.env.RESEND_API_KEY)
     return { status: "failed", error: "Email sending is not configured." };
-  const resend = new Resend(env.resendApiKey);
+  const resend = new Resend(process.env.RESEND_API_KEY);
   const { data, error } = await resend.emails.send(
     { ...email, to: [email.to] },
     { idempotencyKey: key, signal: AbortSignal.timeout(10000) },

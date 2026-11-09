@@ -21,7 +21,6 @@ test(
       "../../config/database.js"
     );
     const { createApp } = await import("../../app.js");
-    const { env } = await import("../../config/env.js");
     const { Guest } = await import("./invitation.model.js");
     const { Wedding } = await import("../weddings/wedding.models.js");
     const { sendWithResend } = await import("./invitation.email.js");
@@ -338,8 +337,8 @@ test(
     await t.test(
       "missing Resend configuration never pretends to send",
       async () => {
-        const key = env.resendApiKey;
-        env.resendApiKey = "";
+        const key = process.env.RESEND_API_KEY!;
+        process.env.RESEND_API_KEY = "";
         try {
           assert.equal(
             (await request(owner, root)).body.data.emailConfigured,
@@ -359,7 +358,7 @@ test(
           assert.equal(calls.length, 0);
           assert.equal((await Guest.findById(guestId))!.invitation, null);
         } finally {
-          env.resendApiKey = key;
+          process.env.RESEND_API_KEY = key;
         }
       },
     );
@@ -441,7 +440,9 @@ test(
         assert.ok(
           !JSON.stringify(publicPage.body).includes("family@example.com"),
         );
-        assert.ok(!JSON.stringify(publicPage.body).includes(env.resendApiKey));
+        assert.ok(
+          !JSON.stringify(publicPage.body).includes(process.env.RESEND_API_KEY!),
+        );
       },
     );
     let failedId = "";

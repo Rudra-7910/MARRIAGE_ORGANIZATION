@@ -14,7 +14,6 @@ import {
 } from "./auth.session.js";
 import { User } from "./user.model.js";
 import { httpError } from "../../middleware/error-handler.js";
-import { env } from "../../config/env.js";
 import { logger } from "../../config/logger.js";
 import { passwordResetEmail } from "./auth.email.js";
 import {
@@ -167,7 +166,7 @@ export function createAuthRouter(sendEmail: EmailSender = sendWithResend) {
   router.post("/forgot-password",recoveryLimit,checkCsrf,async (req, res) => {
     
       const values = z.object({ email }).strict().parse(req.body);
-      if (!env.resendApiKey || !env.resendFrom)
+      if (!process.env.RESEND_API_KEY || !process.env.RESEND_FROM)
         throw httpError(
           503,
           "EMAIL_UNAVAILABLE",
@@ -195,12 +194,12 @@ export function createAuthRouter(sendEmail: EmailSender = sendWithResend) {
       );
       if (user) {
         const content = await passwordResetEmail(
-          env.appOrigin + "/reset-password#" + token,
+          process.env.APP_ORIGIN! + "/reset-password#" + token,
         );
         try {
           const result = await sendEmail(
             {
-              from: env.resendFrom,
+              from: process.env.RESEND_FROM,
               to: user.email,
               subject: "Reset your Make My Marriage password",
               ...content,

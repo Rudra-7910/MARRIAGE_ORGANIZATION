@@ -5,7 +5,6 @@ import { z } from "zod";
 import { PlacesClient } from "@googlemaps/places";
 import { v2 } from "@google-cloud/translate";
 import { rateLimit } from "express-rate-limit";
-import { env } from "../../config/env.js";
 import { httpError } from "../../middleware/error-handler.js";
 import { createSessionMiddleware } from "../auth/auth.session.js";
 import { requireUser } from "../../middleware/wedding-access.js";
@@ -88,7 +87,7 @@ export function createIntegrationRouter() {
       res.json({ data: Object.fromEntries(saved.labels) });
       return;
     }
-    if (!env.googleTranslationApiKey)
+    if (!process.env.GOOGLE_TRANSLATION_API_KEY)
       throw httpError(
         503,
         "TRANSLATION_UNAVAILABLE",
@@ -114,7 +113,9 @@ export function createIntegrationRouter() {
       );
     try {
       if (!translator) {
-        translator = new v2.Translate({ key: env.googleTranslationApiKey });
+        translator = new v2.Translate({
+          key: process.env.GOOGLE_TRANSLATION_API_KEY,
+        });
       }
       const [translations] = await translator.translate([...interfaceLabels], {
         from: "en",
@@ -159,7 +160,7 @@ export function createIntegrationRouter() {
         .object({ search: z.string().trim().min(3).max(100) })
         .strict()
         .parse(req.query);
-      if (!env.googlePlacesApiKey)
+      if (!process.env.GOOGLE_PLACES_API_KEY)
         throw httpError(
           503,
           "PLACES_UNAVAILABLE",
@@ -167,7 +168,7 @@ export function createIntegrationRouter() {
         );
       try {
         if (!places) {
-          places = new PlacesClient({ apiKey: env.googlePlacesApiKey });
+          places = new PlacesClient({ apiKey: process.env.GOOGLE_PLACES_API_KEY });
         }
         const [response] = await places.searchText(
           {

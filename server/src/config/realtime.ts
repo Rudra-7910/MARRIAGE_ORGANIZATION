@@ -1,24 +1,26 @@
 import type { Server as HttpServer } from "node:http";
 import type { Application, Request, RequestHandler } from "express";
 import { Server, type Socket } from "socket.io";
-import { createSessionMiddleware } from "../modules/auth/auth.session.js";
+import {
+  allowedOrigins,
+  createSessionMiddleware,
+} from "../modules/auth/auth.session.js";
 import { User } from "../modules/auth/user.model.js";
 import {
   Wedding,
   canOrganize,
   roleFor,
 } from "../modules/weddings/wedding.models.js";
-import { env } from "./env.js";
 
 // Socket events contain invalidation hints only. Data still comes from authorized REST APIs.
 export function attachRealtime(server: HttpServer, app: Application) {
   const io = new Server(server, {
     maxHttpBufferSize: 20000,
-    cors: { origin: env.allowedOrigins, credentials: true },
+    cors: { origin: allowedOrigins, credentials: true },
     allowRequest: (req, done) =>
       done(
         null,
-        !req.headers.origin || env.allowedOrigins.includes(req.headers.origin),
+        !req.headers.origin || allowedOrigins.includes(req.headers.origin),
       ),
   });
   io.engine.use(
@@ -114,7 +116,9 @@ export function attachRealtime(server: HttpServer, app: Application) {
         path.includes("/upload-links") ||
         path.includes("/uploads");
       const room =
-        "wedding:" + currentWeddingId + (privateChange ? ":organizers" : ":team");
+        "wedding:" +
+        currentWeddingId +
+        (privateChange ? ":organizers" : ":team");
       let resource = "workspace";
       if (path.includes("/budget")) resource = "finance";
       else if (path.includes("/guests")) resource = "guests";

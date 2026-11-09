@@ -1,10 +1,10 @@
+import "./config/env.js";
 import { createServer } from "node:http";
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { logger } from "./config/logger.js";
 import { attachRealtime } from "./config/realtime.js";
 import { createApp } from "./app.js";
-import { env } from "./config/env.js";
 import { connectDatabase, disconnectDatabase } from "./config/database.js";
 
 async function exitAfterDisconnect(exitCode: number) {
@@ -18,7 +18,7 @@ async function exitAfterDisconnect(exitCode: number) {
 
 async function startServer() {
   if (
-    env.isProduction &&
+    process.env.NODE_ENV === "production" &&
     !existsSync(path.resolve(import.meta.dirname, "../../web/dist/index.html"))
   ) {
     throw new Error(
@@ -42,8 +42,10 @@ async function startServer() {
     await exitAfterDisconnect(1);
   });
 
-  server.listen(env.port, env.host, async () => {
-    console.info(`[server] Running at http://${env.host}:${env.port}`);
+  server.listen(Number(process.env.PORT), process.env.HOST!, async () => {
+    console.info(
+      `[server] Running at http://${process.env.HOST!}:${Number(process.env.PORT)}`,
+    );
   });
 
   function shutdown() {

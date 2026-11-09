@@ -14,7 +14,6 @@ import {
 } from "../../middleware/wedding-access.js";
 import { httpError } from "../../middleware/error-handler.js";
 import { accessToken, tokenHash } from "./access-token.js";
-import { env } from "../../config/env.js";
 
 const id = z
   .string()
@@ -336,7 +335,7 @@ export function createSiteRouter() {
           revoked: updated.accessRevoked,
           url: updated.accessRevoked
             ? null
-            : env.appOrigin +
+            : process.env.APP_ORIGIN! +
               "/w/" +
               wedding.publicId +
               "#invite=" +

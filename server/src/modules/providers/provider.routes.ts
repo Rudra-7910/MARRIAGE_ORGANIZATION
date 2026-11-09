@@ -5,7 +5,6 @@ import { z } from "zod";
 import { rateLimit } from "express-rate-limit";
 import { isPossiblePhoneNumber } from "libphonenumber-js";
 import escapeStringRegexp from "escape-string-regexp";
-import { env } from "../../config/env.js";
 import {
   requireUser,
   requireWedding,
@@ -217,7 +216,9 @@ export function createProviderRouter() {
               moderationReason: profile.moderationReason,
             }
           : null,
-        canModerate: env.moderatorIds.includes(req.session.userId!),
+        canModerate: (process.env.PLATFORM_MODERATOR_USER_IDS || "")
+          .split(",")
+          .includes(req.session.userId!),
       },
     });
   });
@@ -327,7 +328,12 @@ export function createProviderRouter() {
       data: {
         provider: providerData(profile),
         canReview,
-        canModerate: Boolean(userId && env.moderatorIds.includes(userId)),
+        canModerate: Boolean(
+          userId &&
+            (process.env.PLATFORM_MODERATOR_USER_IDS || "")
+              .split(",")
+              .includes(userId),
+        ),
         reviews: reviews.map((review) => ({
           id: review.id,
           rating: review.rating,
@@ -580,7 +586,11 @@ export function createProviderRouter() {
     },
   );
   router.use("/moderation", requireUser, (req, _res, next) => {
-    if (!env.moderatorIds.includes(req.session.userId!))
+    if (
+      !(process.env.PLATFORM_MODERATOR_USER_IDS || "")
+        .split(",")
+        .includes(req.session.userId!)
+    )
       throw httpError(
         403,
         "FORBIDDEN",
